@@ -296,15 +296,15 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
     >
       <div 
         id="artwork-modal-container"
-        className="relative w-full max-w-2xl my-auto rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl my-auto rounded-2xl sm:rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-neutral-100 dark:border-neutral-800">
           <div>
-            <h2 className="font-art-serif text-lg font-bold text-neutral-900 dark:text-neutral-100">
+            <h2 className="font-art-serif text-base sm:text-lg font-bold text-neutral-900 dark:text-neutral-100">
               {editArtwork ? '编辑作品信息' : '添加新作品'}
             </h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400">
               保存至个人本地画匣 (IndexedDB)，支持高分图、PSD/AI工程与缩放调节
             </p>
           </div>
@@ -317,7 +317,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
         </div>
 
         {/* Modal Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
           {errorMsg && (
             <div className="px-3.5 py-2 rounded-xl text-xs bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
               {errorMsg}

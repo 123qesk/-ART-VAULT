@@ -117,7 +117,7 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
                 className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 ${
                   artwork.isPinned
                     ? 'bg-amber-500 text-white shadow-sm scale-105'
-                    : 'bg-black/30 hover:bg-black/60 text-white/70 hover:text-white opacity-0 group-hover:opacity-100'
+                    : 'bg-black/30 hover:bg-black/60 text-white/80 hover:text-white opacity-80 sm:opacity-0 sm:group-hover:opacity-100'
                 }`}
               >
                 <Pin className={`w-3.5 h-3.5 ${artwork.isPinned ? 'fill-current' : ''}`} />

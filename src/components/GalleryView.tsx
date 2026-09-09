@@ -18,7 +18,9 @@ import {
   Pin,
   Eye,
   Settings2,
-  ChevronDown
+  ChevronDown,
+  Filter,
+  X
 } from 'lucide-react';
 import { Artwork, GalleryLayoutMode, CategoryItem, StatusItem } from '../types';
 import { ArtworkCard } from './ArtworkCard';
@@ -75,8 +77,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
   // Layout states (Requirement 3 & 4)
   const [layoutMode, setLayoutMode] = useState<GalleryLayoutMode>('masonry'); // 'masonry' | 'list'
-  const [masonryColumns, setMasonryColumns] = useState<2 | 3 | 4>(3);
+  const [masonryColumns, setMasonryColumns] = useState<1 | 2 | 3 | 4>(3);
   const [showMasonryDropdown, setShowMasonryDropdown] = useState(false);
+  const [isMobileFilterDrawerOpen, setIsMobileFilterDrawerOpen] = useState(false);
   const masonryDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -210,12 +213,92 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         onUpdateStatuses={onUpdateStatuses}
       />
 
+      {/* Mobile Horizontal Category Bar (Visible on mobile screens) */}
+      <div className="md:hidden w-full pb-2 mb-4 space-y-2">
+        <div className="flex items-center justify-between gap-2 px-1">
+          <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 font-art-serif flex items-center gap-1.5">
+            <Folder className="w-3.5 h-3.5 text-amber-500" />
+            <span>分类速选</span>
+          </span>
+          <div className="flex items-center gap-1.5">
+            {selectedTag && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono">
+                #{selectedTag}
+                <button onClick={() => setSelectedTag('')} className="p-0.5 hover:text-rose-500">✕</button>
+              </span>
+            )}
+            <button
+              type="button"
+              id="mobile-filter-drawer-btn"
+              onClick={() => setIsMobileFilterDrawerOpen(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 active:scale-95"
+            >
+              <Filter className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+              <span>筛选/标签</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable category pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 px-0.5 touch-pan-x">
+          <button
+            onClick={() => { setSelectedCategory('all'); setSelectedTag(''); }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+              selectedCategory === 'all' && !selectedTag
+                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs font-bold'
+                : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:border-amber-400'
+            }`}
+          >
+            全部 ({categoryCounts.all})
+          </button>
+
+          <button
+            onClick={() => { setSelectedCategory('favorites'); setSelectedTag(''); }}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+              selectedCategory === 'favorites'
+                ? 'bg-amber-500 text-white shadow-xs font-bold'
+                : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800'
+            }`}
+          >
+            <Star className="w-3 h-3 fill-current text-amber-400" />
+            <span>收藏 ({categoryCounts.favorites})</span>
+          </button>
+
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => { setSelectedCategory(cat.name); setSelectedTag(''); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+                selectedCategory === cat.name
+                  ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs font-bold'
+                  : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:border-amber-400'
+              }`}
+            >
+              <span>{cat.name}</span>
+              <span className="ml-1 opacity-70 font-mono text-[10px]">({categoryCounts[cat.name] || 0})</span>
+            </button>
+          ))}
+
+          <button
+            onClick={() => { setSelectedCategory('trash'); setSelectedTag(''); }}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+              selectedCategory === 'trash'
+                ? 'bg-rose-600 text-white shadow-xs font-bold'
+                : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800'
+            }`}
+          >
+            <Trash2 className="w-3 h-3 text-rose-500" />
+            <span>回收站 ({categoryCounts.trash})</span>
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row gap-8 items-start">
         
-        {/* Left Sidebar Category Navigation */}
+        {/* Left Sidebar Category Navigation (Desktop / Tablet only) */}
         <aside 
           id="gallery-sidebar"
-          className="w-full md:w-60 shrink-0 sticky top-24 space-y-6"
+          className="hidden md:block w-60 shrink-0 sticky top-24 space-y-6"
         >
           {/* Main Categories Section */}
           <div className="bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] rounded-2xl p-3 shadow-xs">
@@ -454,7 +537,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                       瀑布流列数
                     </div>
                     <div className="space-y-0.5">
-                      {([2, 3, 4] as const).map((cols) => (
+                      {([1, 2, 3, 4] as const).map((cols) => (
                         <button
                           key={cols}
                           onClick={() => {
@@ -472,7 +555,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                           }`}
                         >
                           <span className="flex items-center gap-1.5">
-                            <span className="font-mono font-semibold">{cols}</span> 列展示
+                            <span className="font-mono font-semibold">{cols}</span> 列{cols === 1 ? ' (单张大图)' : cols === 2 ? ' (双栏精选)' : cols === 3 ? ' (标准三栏)' : ' (紧凑多栏)'}
                           </span>
                           {masonryColumns === cols && layoutMode === 'masonry' && (
                             <span className="text-amber-600 dark:text-amber-400 text-xs">✓</span>
@@ -741,6 +824,112 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
         </main>
       </div>
+
+      {/* Mobile Filter & Tags Drawer Bottom Sheet */}
+      {isMobileFilterDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div 
+            style={{
+              backgroundColor: 'var(--card-bg, #ffffff)',
+              borderColor: 'var(--card-border, #E8E4DC)',
+            }}
+            className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl border shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-amber-500" />
+                <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100">
+                  筛选与标签
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterDrawerOpen(false)}
+                className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Manage Categories and Statuses Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileFilterDrawerOpen(false);
+                setIsManagerOpen(true);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 text-xs font-medium text-neutral-800 dark:text-neutral-200 transition-colors"
+            >
+              <Settings2 className="w-4 h-4 text-amber-500" />
+              <span>管理作品分类与状态 (可拖拽排序/添加)</span>
+            </button>
+
+            {/* Tag Cloud in Mobile Drawer */}
+            {allTags.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-neutral-500">热门标签</span>
+                  {selectedTag && (
+                    <button
+                      onClick={() => setSelectedTag('')}
+                      className="text-xs text-amber-600 dark:text-amber-400 hover:underline"
+                    >
+                      清除当前标签
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-1">
+                  {allTags.map(([tag, count]) => {
+                    const isSelected = selectedTag === tag;
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => {
+                          setSelectedTag(isSelected ? '' : tag);
+                          setIsMobileFilterDrawerOpen(false);
+                        }}
+                        className={`text-xs px-3 py-1.5 rounded-full font-mono transition-colors active:scale-95 ${
+                          isSelected
+                            ? 'bg-amber-600 text-white font-semibold'
+                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                        }`}
+                      >
+                        #{tag} <span className="opacity-60 text-[10px]">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Actions Footer */}
+            <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setStatusFilter('all');
+                  setSelectedTag('');
+                  setDateFilter('all');
+                  onSearchChange('');
+                  setIsMobileFilterDrawerOpen(false);
+                }}
+                className="px-4 py-2 text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+              >
+                重置所有筛选
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterDrawerOpen(false)}
+                className="px-5 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold shadow-xs active:scale-95"
+              >
+                完成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

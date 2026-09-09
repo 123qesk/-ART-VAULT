@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomeView } from './components/HomeView';
 import { GalleryView } from './components/GalleryView';
 import { DiaryView } from './components/DiaryView';
@@ -264,7 +265,7 @@ export default function App() {
         />
 
         {/* Main Content Router */}
-        <div className="flex-1">
+        <div className="flex-1 pb-20 md:pb-0">
           {currentTab === 'home' && (
             <HomeView
               artworks={artworks}
@@ -333,6 +334,18 @@ export default function App() {
           )}
         </div>
 
+        {/* Mobile Fixed Bottom Dock Navigation */}
+        <MobileBottomNav
+          currentTab={currentTab}
+          onSelectTab={setCurrentTab}
+          onOpenAddModal={() => {
+            setEditingArtwork(null);
+            setIsAddModalOpen(true);
+          }}
+          artworksCount={artworks.length}
+          diariesCount={diaries.length}
+        />
+
         {/* Add / Edit Artwork Modal */}
         <ArtworkModal
           isOpen={isAddModalOpen}
@@ -367,7 +380,7 @@ export default function App() {
 
         {/* Toast Notification Pill */}
         {toastMessage && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-medium shadow-xl border border-white/10 dark:border-black/10 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-medium shadow-xl border border-white/10 dark:border-black/10 animate-in fade-in slide-in-from-bottom-3 duration-200">
             <Check className="w-3.5 h-3.5 text-amber-400 dark:text-amber-600" />
             <span>{toastMessage}</span>
           </div>

@@ -114,12 +114,12 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-neutral-100 dark:border-neutral-800">
           <div>
-            <h2 className="font-art-serif text-lg font-bold text-neutral-900 dark:text-neutral-100">
+            <h2 className="font-art-serif text-base sm:text-lg font-bold text-neutral-900 dark:text-neutral-100">
               作品分类与状态管理
             </h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
               支持自由拖拽排序、新增和删除分类/状态
             </p>
           </div>
@@ -132,10 +132,10 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
         </div>
 
         {/* Tab Toggle */}
-        <div className="flex px-6 pt-4 gap-2 border-b border-neutral-100 dark:border-neutral-800">
+        <div className="flex px-4 sm:px-6 pt-3 sm:pt-4 gap-2 border-b border-neutral-100 dark:border-neutral-800">
           <button
             onClick={() => setActiveTab('categories')}
-            className={`pb-3 px-2 text-sm font-medium border-b-2 transition-all ${
+            className={`pb-3 px-2 text-xs sm:text-sm font-medium border-b-2 transition-all ${
               activeTab === 'categories'
                 ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-bold'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
@@ -145,7 +145,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('statuses')}
-            className={`pb-3 px-2 text-sm font-medium border-b-2 transition-all ${
+            className={`pb-3 px-2 text-xs sm:text-sm font-medium border-b-2 transition-all ${
               activeTab === 'statuses'
                 ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-bold'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
@@ -156,7 +156,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto space-y-5">
+        <div className="p-4 sm:p-6 max-h-[65vh] sm:max-h-[60vh] overflow-y-auto space-y-4 sm:space-y-5">
           {activeTab === 'categories' ? (
             <div className="space-y-4">
               {/* Add category input */}

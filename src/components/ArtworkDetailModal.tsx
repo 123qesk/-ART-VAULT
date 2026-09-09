@@ -153,87 +153,87 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
       className="fixed inset-0 z-50 flex flex-col lg:flex-row bg-[#0E1015]/95 backdrop-blur-md text-neutral-100 overflow-hidden select-none animate-in fade-in duration-200"
     >
       {/* Top Floating Control Bar */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-3 sm:p-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
-        <div className="flex items-center gap-3">
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2 sm:p-4 bg-gradient-to-b from-black/85 via-black/50 to-transparent pointer-events-auto">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
           {artwork.isPinned && (
-            <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs">
-              <Pin className="w-3 h-3 fill-current" />
-              已置顶
+            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-xs shrink-0">
+              <Pin className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+              <span className="hidden xs:inline">已置顶</span>
             </span>
           )}
-          <span className="font-art-serif text-base font-bold text-white tracking-wide">
+          <span className="font-art-serif text-sm sm:text-base font-bold text-white tracking-wide truncate max-w-[120px] sm:max-w-xs md:max-w-md">
             {artwork.title}
           </span>
-          <span className="text-xs font-mono text-neutral-400 hidden sm:inline">
+          <span className="text-[11px] sm:text-xs font-mono text-neutral-400 hidden sm:inline shrink-0">
             ({currentIndex + 1} / {allArtworks.length})
           </span>
         </div>
 
         {/* View Tools */}
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {onTogglePin && (
             <button
               onClick={() => onTogglePin(artwork.id)}
               title={artwork.isPinned ? '取消置顶' : '置顶本作品'}
-              className={`p-2 rounded-full transition-colors ${
+              className={`p-1.5 sm:p-2 rounded-full transition-colors ${
                 artwork.isPinned ? 'bg-amber-500 text-white' : 'bg-white/10 hover:bg-white/20 text-neutral-200'
               }`}
             >
-              <Pin className={`w-4 h-4 ${artwork.isPinned ? 'fill-current' : ''}`} />
+              <Pin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${artwork.isPinned ? 'fill-current' : ''}`} />
             </button>
           )}
 
           <button
             onClick={handleZoomOut}
             title="缩小"
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
+            className="p-1.5 sm:p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
           >
-            <ZoomOut className="w-4 h-4" />
+            <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
-          <span className="text-xs font-mono px-1 text-neutral-300 min-w-[42px] text-center">
+          <span className="text-[11px] sm:text-xs font-mono px-0.5 sm:px-1 text-neutral-300 min-w-[34px] sm:min-w-[42px] text-center">
             {Math.round(zoomLevel * 100)}%
           </span>
           <button
             onClick={handleZoomIn}
             title="放大"
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
+            className="p-1.5 sm:p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
           >
-            <ZoomIn className="w-4 h-4" />
+            <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
           <button
             onClick={handleResetZoom}
             title="重置缩放"
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
+            className="hidden sm:inline-flex p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
           <button
             onClick={handleRotate}
             title="旋转 90°"
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
+            className="p-1.5 sm:p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
           >
-            <RotateCw className="w-4 h-4" />
+            <RotateCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
           <button
             onClick={toggleFullscreen}
             title="全屏模式"
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
+            className="hidden sm:inline-flex p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 transition-colors"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
           <button
             onClick={onClose}
             title="关闭 (Esc)"
-            className="p-2 ml-2 rounded-full bg-white/20 hover:bg-rose-600 text-white transition-colors"
+            className="p-1.5 sm:p-2 ml-1 sm:ml-2 rounded-full bg-white/20 hover:bg-rose-600 text-white transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
       </div>
 
       {/* Main Image Stage (Left / Center) */}
       <div
-        className={`relative flex-1 h-[60vh] lg:h-full flex items-center justify-center overflow-hidden p-4 ${
+        className={`relative flex-1 h-[52vh] sm:h-[60vh] lg:h-full flex items-center justify-center overflow-hidden p-2 sm:p-4 ${
           zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
         }`}
         onMouseDown={handleMouseDown}
@@ -245,9 +245,9 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           <button
             onClick={goToPrev}
             aria-label="上一件作品"
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/40 hover:bg-black/80 text-white backdrop-blur-md transition-all hover:scale-110"
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         )}
 
@@ -256,9 +256,9 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           <button
             onClick={goToNext}
             aria-label="下一件作品"
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/40 hover:bg-black/80 text-white backdrop-blur-md transition-all hover:scale-110"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         )}
 
@@ -281,7 +281,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
       {/* Detail Metadata Sidebar (Right / Bottom) */}
       <div
         id="artwork-detail-sidebar"
-        className="w-full lg:w-96 shrink-0 h-[40vh] lg:h-full bg-[#15181F] border-t lg:border-t-0 lg:border-l border-neutral-800 p-6 flex flex-col justify-between overflow-y-auto"
+        className="w-full lg:w-96 shrink-0 h-[48vh] sm:h-[40vh] lg:h-full bg-[#15181F] border-t lg:border-t-0 lg:border-l border-neutral-800 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto"
       >
         <div className="space-y-6">
           {/* Title & Favorite */}

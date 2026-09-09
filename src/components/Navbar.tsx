@@ -44,7 +44,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { theme, setTheme } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (showMobileSearch && mobileSearchInputRef.current) {
+      mobileSearchInputRef.current.focus();
+    }
+  }, [showMobileSearch]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -117,8 +125,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Center Search Bar */}
-          <div className="flex-1 max-w-md mx-2 sm:mx-4">
+          {/* Center Search Bar (Desktop / Tablet) */}
+          <div className="hidden sm:block flex-1 max-w-md mx-2 sm:mx-4">
             <div className="relative flex items-center">
               <Search className="w-4 h-4 text-neutral-400 dark:text-neutral-500 absolute left-3 pointer-events-none" />
               <input
@@ -150,9 +158,24 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Right Actions: Add Work, Day/Night Switch, Profile */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Quick Add Artwork Button */}
+          {/* Right Actions: Add Work, Theme, Search Toggle */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Mobile Search Toggle Button */}
+            <button
+              id="mobile-search-toggle-btn"
+              onClick={() => setShowMobileSearch(!showMobileSearch)}
+              className={`sm:hidden p-2 rounded-full border transition-all active:scale-95 ${
+                showMobileSearch || searchQuery
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                  : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-white border-transparent'
+              }`}
+              title="搜索作品"
+              aria-label="搜索作品"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
+            {/* Quick Add Artwork Button (Desktop) */}
             <button
               id="btn-add-artwork-top"
               onClick={onOpenAddModal}
@@ -174,7 +197,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   borderColor: 'var(--card-border)',
                   color: 'var(--text-main)',
                 }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-full border shadow-2xs hover:opacity-90 transition-all active:scale-95 text-xs font-medium"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-full border shadow-2xs hover:opacity-90 transition-all active:scale-95 text-xs font-medium"
               >
                 <Palette className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <span className="hidden sm:inline">
@@ -239,25 +262,60 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* Mobile Add Button */}
+            {/* Mobile Quick Add Button */}
             <button
               id="mobile-add-btn"
               onClick={onOpenAddModal}
               className="sm:hidden p-2 rounded-full bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 active:scale-95"
               title="添加作品"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Navigation Tabs Bar */}
+        {/* Mobile Dropdown Search Input Bar (Visible when toggled on mobile) */}
+        {showMobileSearch && (
+          <div className="sm:hidden pb-3 pt-1 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="relative flex items-center">
+              <Search className="w-4 h-4 text-neutral-400 dark:text-neutral-500 absolute left-3 pointer-events-none" />
+              <input
+                ref={mobileSearchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  onSearchChange(e.target.value);
+                  if (currentTab !== 'gallery' && currentTab !== 'favorites') {
+                    onSelectTab('gallery');
+                  }
+                }}
+                placeholder="搜索作品名称、标签 (#人物、#夜景)..."
+                style={{
+                  backgroundColor: 'var(--card-bg)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text-main)',
+                }}
+                className="w-full pl-9 pr-8 py-2 text-sm rounded-full border placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-3 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Tabs Bar (Desktop / Tablet view: hidden on mobile since MobileBottomNav is used) */}
         <nav 
           id="navbar-tabs-container"
           style={{
             borderColor: 'var(--navbar-border, var(--card-border))',
           }}
-          className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none py-2 border-t"
+          className="hidden md:flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none py-2 border-t"
         >
           {navItems.map((item) => {
             const isActive = currentTab === item.id;
