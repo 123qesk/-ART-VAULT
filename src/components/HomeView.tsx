@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, 
   ArrowRight, 
@@ -34,6 +34,8 @@ const DEFAULT_GREETING_TITLE = '你好，画师';
 const DEFAULT_GREETING_SUBTITLE = '今天也来画点什么吧。灵感稍纵即逝，将每一个笔触与故事装入画匣。';
 const DEFAULT_ARTIST_NAME = '莫奈画师';
 const DEFAULT_ARTIST_SIGNATURE = '以画笔勾勒世界，用色彩记录生活 · 画室主理人 ✨';
+const DEFAULT_ARTIST_STATUS = '创作中';
+const DEFAULT_ARTIST_ROLE = '画室主理人';
 
 export const HomeView: React.FC<HomeViewProps> = ({
   artworks,
@@ -76,8 +78,33 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Greeting and motto color quick-pick states
-  const [showColorPickerFor, setShowColorPickerFor] = useState<'greeting' | 'motto' | null>(null);
+  // Artist Status State
+  const [artistStatus, setArtistStatus] = useState<string>(() => {
+    return localStorage.getItem('art_vault_artist_status') || DEFAULT_ARTIST_STATUS;
+  });
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
+  const [tempStatus, setTempStatus] = useState(artistStatus);
+
+  // Editable Role (Requirement 6)
+  const [artistRole, setArtistRole] = useState<string>(() => {
+    return localStorage.getItem('art_vault_artist_role') || DEFAULT_ARTIST_ROLE;
+  });
+  const [isEditingRole, setIsEditingRole] = useState(false);
+  const [tempRole, setTempRole] = useState(artistRole);
+
+  const handleSaveRole = () => {
+    const val = tempRole.trim() || DEFAULT_ARTIST_ROLE;
+    setArtistRole(val);
+    localStorage.setItem('art_vault_artist_role', val);
+    setIsEditingRole(false);
+  };
+
+  const handleSaveStatus = () => {
+    const val = tempStatus.trim() || '创作中';
+    setArtistStatus(val);
+    localStorage.setItem('art_vault_artist_status', val);
+    setIsEditingStatus(false);
+  };
 
   const handleSaveTitle = () => {
     const val = tempTitle.trim() || DEFAULT_GREETING_TITLE;
@@ -151,9 +178,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 4);
 
-  const effectiveGreetingColor = customColors.homeGreetingColor || customColors.textMain || 'var(--text-main)';
-  const effectiveMottoColor = customColors.homeMottoColor || customColors.textMuted || 'var(--text-muted)';
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10 sm:space-y-14 animate-in fade-in duration-300">
       
@@ -174,41 +198,71 @@ export const HomeView: React.FC<HomeViewProps> = ({
           />
 
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            {/* Left: Avatar with golden ring & creation badge */}
+            {/* Left: Avatar with golden ring & centered status */}
             <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
-              <div className="relative group shrink-0">
-                <div 
-                  onClick={() => setIsAvatarModalOpen(true)}
-                  className="w-18 h-18 sm:w-20 sm:h-20 rounded-full p-1 cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 shadow-sm overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(135deg, var(--accent-gold) 0%, rgba(200, 160, 100, 0.4) 100%)',
-                  }}
-                  title="点击更换画师头像"
-                >
-                  <img
-                    src={avatarUrl}
-                    alt={artistName}
-                    className="w-full h-full rounded-full object-cover bg-white dark:bg-neutral-800"
-                  />
-                  {/* Camera overlay hover */}
-                  <div className="absolute inset-1 rounded-full bg-black/45 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="w-4 h-4" />
-                    <span className="text-[9px] mt-0.5 font-medium">换头像</span>
+              <div className="flex flex-col items-center justify-center shrink-0 min-w-[72px] sm:min-w-[80px]">
+                <div className="relative group flex justify-center items-center">
+                  <div 
+                    onClick={() => setIsAvatarModalOpen(true)}
+                    className="w-18 h-18 sm:w-20 sm:h-20 rounded-full p-1 cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 shadow-sm overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--accent-gold) 0%, color-mix(in srgb, var(--accent-gold) 40%, transparent) 100%)',
+                    }}
+                    title="点击更换画师头像"
+                  >
+                    <img
+                      src={avatarUrl}
+                      alt={artistName}
+                      className="w-full h-full rounded-full object-cover bg-white dark:bg-neutral-800"
+                    />
+                    {/* Camera overlay hover */}
+                    <div className="absolute inset-1 rounded-full bg-black/45 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="w-4 h-4" />
+                      <span className="text-[9px] mt-0.5 font-medium">换头像</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Creative status indicator */}
-                <div 
-                  className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-full text-[10px] font-medium border shadow-xs flex items-center gap-1"
-                  style={{
-                    backgroundColor: 'var(--card-bg)',
-                    borderColor: 'var(--card-border)',
-                    color: 'var(--accent-gold)',
-                  }}
-                  title="画室创作者在线状态"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>创作中</span>
+                {/* Creative status indicator: Frameless, directly editable upon click, strictly centered under avatar */}
+                <div className="w-full flex items-center justify-center text-center mt-1.5 min-h-[22px]">
+                  {isEditingStatus ? (
+                    <div className="flex items-center justify-center w-full">
+                      <input
+                        type="text"
+                        value={tempStatus}
+                        onChange={(e) => setTempStatus(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveStatus();
+                          if (e.key === 'Escape') setIsEditingStatus(false);
+                        }}
+                        onBlur={handleSaveStatus}
+                        autoFocus
+                        maxLength={20}
+                        className="text-center font-semibold text-xs bg-transparent border-b focus:outline-none px-1 py-0.5 max-w-[140px] sm:max-w-[180px]"
+                        style={{
+                          borderColor: 'var(--accent-gold)',
+                          color: 'var(--accent-gold)',
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div 
+                      onClick={() => {
+                        setTempStatus(artistStatus);
+                        setIsEditingStatus(true);
+                      }}
+                      className="group/status inline-flex items-center justify-center text-center cursor-pointer transition-opacity hover:opacity-85 select-none max-w-[140px] sm:max-w-[180px]"
+                      title="点击直接修改创作状态"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0 mr-1" />
+                      <span 
+                        className="text-xs font-semibold tracking-tight truncate text-center"
+                        style={{ color: 'var(--accent-gold)' }}
+                      >
+                        {artistStatus}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -227,12 +281,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           if (e.key === 'Escape') setIsEditingName(false);
                         }}
                         autoFocus
-                        className="font-art-serif text-lg sm:text-xl font-bold rounded-lg px-2 py-0.5 border-2 border-amber-500 focus:outline-none w-36 sm:w-48 bg-white dark:bg-[#181B22]"
-                        style={{ color: 'var(--text-main)' }}
+                        className="font-art-serif text-lg sm:text-xl font-bold rounded-lg px-2 py-0.5 border-2 focus:outline-none w-36 sm:w-48 bg-white dark:bg-[#181B22]"
+                        style={{ borderColor: 'var(--accent-gold)', color: 'var(--text-main)' }}
                       />
                       <button
                         onClick={handleSaveName}
-                        className="p-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                        className="p-1.5 rounded-lg text-white transition-colors"
+                        style={{ backgroundColor: 'var(--accent-gold)' }}
                         title="保存昵称"
                       >
                         <Check className="w-3.5 h-3.5" />
@@ -257,18 +312,56 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </div>
                   )}
 
-                  {/* Studio Lead Badge */}
-                  <span 
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border"
-                    style={{
-                      backgroundColor: 'rgba(194, 142, 90, 0.12)',
-                      borderColor: 'rgba(194, 142, 90, 0.3)',
-                      color: 'var(--accent-gold)',
-                    }}
-                  >
-                    <Paintbrush className="w-3 h-3" />
-                    <span>画室主理人</span>
-                  </span>
+                  {/* Studio Lead Badge - Editable (Requirement 5 & 6) */}
+                  {isEditingRole ? (
+                    <div className="inline-flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={tempRole}
+                        onChange={(e) => setTempRole(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveRole();
+                          if (e.key === 'Escape') setIsEditingRole(false);
+                        }}
+                        autoFocus
+                        maxLength={16}
+                        className="text-[10px] font-semibold rounded-full px-2 py-0.5 border-2 focus:outline-none w-24"
+                        style={{
+                          backgroundColor: 'var(--bg-page)',
+                          borderColor: 'var(--accent-gold)',
+                          color: 'var(--accent-gold)',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveRole}
+                        className="p-1 rounded-full text-white shadow-2xs hover:scale-105 transition-transform"
+                        style={{ backgroundColor: 'var(--accent-gold)' }}
+                        title="保存头衔"
+                      >
+                        <Check className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempRole(artistRole);
+                        setIsEditingRole(true);
+                      }}
+                      className="group/role inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+                        borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                        color: 'var(--accent-gold)',
+                      }}
+                      title="点击修改头衔"
+                    >
+                      <Paintbrush className="w-3 h-3" />
+                      <span>{artistRole}</span>
+                      <Edit2 className="w-2.5 h-2.5 opacity-60 group-hover/role:opacity-100 transition-opacity ml-0.5" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Editable Personal Signature */}
@@ -283,12 +376,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         if (e.key === 'Escape') setIsEditingSignature(false);
                       }}
                       autoFocus
-                      className="text-xs sm:text-sm rounded-lg px-2.5 py-1 border-2 border-amber-500 focus:outline-none w-full max-w-md bg-white dark:bg-[#181B22]"
-                      style={{ color: 'var(--text-main)' }}
+                      className="text-xs sm:text-sm rounded-lg px-2.5 py-1 border-2 focus:outline-none w-full max-w-md bg-white dark:bg-[#181B22]"
+                      style={{ borderColor: 'var(--accent-gold)', color: 'var(--text-main)' }}
                     />
                     <button
                       onClick={handleSaveSignature}
-                      className="p-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors shrink-0"
+                      className="p-1.5 rounded-lg text-white transition-colors shrink-0"
+                      style={{ backgroundColor: 'var(--accent-gold)' }}
                       title="保存签名"
                     >
                       <Check className="w-3.5 h-3.5" />
@@ -338,15 +432,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* Hero Greeting Section with Customizable Title & Motto Colors (Requirement 2) */}
+      {/* Hero Greeting Section */}
       <section id="home-hero-greeting" className="relative pt-2 pb-1">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div className="space-y-3 flex-1 max-w-2xl">
             <div 
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors"
               style={{
-                backgroundColor: 'rgba(194, 142, 90, 0.1)',
-                borderColor: 'rgba(194, 142, 90, 0.25)',
+                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
                 color: 'var(--accent-gold)',
               }}
             >
@@ -354,7 +448,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <span>画师个人作品档案馆</span>
             </div>
 
-            {/* Editable Greeting Title with Customizable Color */}
+            {/* Editable Greeting Title (follows standard text color) */}
             <div className="relative group">
               {isEditingTitle ? (
                 <div className="flex items-center gap-2 mt-1">
@@ -367,15 +461,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       if (e.key === 'Escape') setIsEditingTitle(false);
                     }}
                     autoFocus
-                    className="font-art-serif text-2xl sm:text-4xl font-bold tracking-tight border-2 border-amber-500 rounded-xl px-3 py-1 focus:outline-none w-full shadow-sm"
+                    className="font-art-serif text-2xl sm:text-4xl font-bold tracking-tight border-2 rounded-xl px-3 py-1 focus:outline-none w-full shadow-sm"
                     style={{
                       backgroundColor: 'var(--card-bg)',
-                      color: effectiveGreetingColor,
+                      borderColor: 'var(--accent-gold)',
+                      color: 'var(--text-main)',
                     }}
                   />
                   <button
                     onClick={handleSaveTitle}
-                    className="p-2.5 rounded-xl bg-amber-500 text-white hover:bg-amber-600 active:scale-95 transition-all shrink-0"
+                    className="p-2.5 rounded-xl text-white active:scale-95 transition-all shrink-0"
+                    style={{ backgroundColor: 'var(--accent-gold)' }}
                     title="保存"
                   >
                     <Check className="w-5 h-5" />
@@ -390,66 +486,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     }}
                     title="点击即可直接修改问候语内容"
                     className="font-art-serif text-3xl sm:text-5xl font-bold tracking-tight leading-tight cursor-pointer hover:opacity-85 inline-flex items-center gap-3 transition-all"
-                    style={{ color: effectiveGreetingColor }}
+                    style={{ color: 'var(--text-main)' }}
                   >
                     <span>{greetingTitle}</span>
                     <Edit2 className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-neutral-400" />
                   </h1>
-
-                  {/* Quick Color Picker for Greeting Title */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowColorPickerFor(showColorPickerFor === 'greeting' ? null : 'greeting')}
-                      className="p-1.5 rounded-lg border text-neutral-400 hover:text-amber-600 hover:border-amber-400 transition-colors text-[11px] flex items-center gap-1"
-                      style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--card-bg)' }}
-                      title="自定义问候语颜色"
-                    >
-                      <span 
-                        className="w-3.5 h-3.5 rounded-full border border-black/15 shrink-0"
-                        style={{ backgroundColor: effectiveGreetingColor }}
-                      />
-                      <Palette className="w-3 h-3" />
-                    </button>
-
-                    {showColorPickerFor === 'greeting' && (
-                      <div 
-                        className="absolute left-0 top-full mt-2 z-30 p-3 rounded-2xl border shadow-xl flex items-center gap-2 animate-in fade-in"
-                        style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
-                      >
-                        <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--text-main)' }}>问候色:</span>
-                        <input
-                          type="color"
-                          value={customColors.homeGreetingColor || '#111827'}
-                          onChange={(e) => setCustomColors({ homeGreetingColor: e.target.value })}
-                          className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
-                        />
-                        {/* Quick recommended swatches */}
-                        {['#1C1E21', '#B4783E', '#2563EB', '#D97706', '#059669', '#E11D48', '#7C3AED'].map((color) => (
-                          <button
-                            key={color}
-                            onClick={() => {
-                              setCustomColors({ homeGreetingColor: color });
-                              setShowColorPickerFor(null);
-                            }}
-                            className="w-5 h-5 rounded-full border border-black/10 hover:scale-110 transition-transform"
-                            style={{ backgroundColor: color }}
-                            title={`应用色彩 ${color}`}
-                          />
-                        ))}
-                        <button
-                          onClick={() => setShowColorPickerFor(null)}
-                          className="text-xs p-1 text-neutral-400 hover:text-neutral-700 ml-1"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* Editable Subtitle / Motto with Customizable Color */}
+            {/* Editable Subtitle / Motto (follows standard text color) */}
             <div className="relative group pt-1">
               {isEditingSubtitle ? (
                 <div className="flex items-start gap-2 mt-1">
@@ -465,15 +511,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       if (e.key === 'Escape') setIsEditingSubtitle(false);
                     }}
                     autoFocus
-                    className="text-sm sm:text-base border-2 border-amber-500 rounded-xl p-2.5 focus:outline-none w-full shadow-sm resize-none"
+                    className="text-sm sm:text-base border-2 rounded-xl p-2.5 focus:outline-none w-full shadow-sm resize-none"
                     style={{
                       backgroundColor: 'var(--card-bg)',
-                      color: effectiveMottoColor,
+                      borderColor: 'var(--accent-gold)',
+                      color: 'var(--text-muted)',
                     }}
                   />
                   <button
                     onClick={handleSaveSubtitle}
-                    className="p-2 rounded-xl bg-amber-500 text-white hover:bg-amber-600 active:scale-95 transition-all shrink-0 mt-1"
+                    className="p-2 rounded-xl text-white active:scale-95 transition-all shrink-0 mt-1"
+                    style={{ backgroundColor: 'var(--accent-gold)' }}
                     title="保存"
                   >
                     <Check className="w-4 h-4" />
@@ -488,61 +536,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     }}
                     title="点击即可直接修改寄语内容"
                     className="text-base sm:text-lg font-light max-w-xl cursor-pointer hover:opacity-85 inline-flex items-center gap-2 transition-colors"
-                    style={{ color: effectiveMottoColor }}
+                    style={{ color: 'var(--text-muted)' }}
                   >
                     <span>{greetingSubtitle}</span>
                     <Edit2 className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </p>
-
-                  {/* Quick Color Picker for Motto */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowColorPickerFor(showColorPickerFor === 'motto' ? null : 'motto')}
-                      className="p-1.5 rounded-lg border text-neutral-400 hover:text-amber-600 hover:border-amber-400 transition-colors text-[11px] flex items-center gap-1"
-                      style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--card-bg)' }}
-                      title="自定义寄语颜色"
-                    >
-                      <span 
-                        className="w-3.5 h-3.5 rounded-full border border-black/15 shrink-0"
-                        style={{ backgroundColor: effectiveMottoColor }}
-                      />
-                      <Palette className="w-3 h-3" />
-                    </button>
-
-                    {showColorPickerFor === 'motto' && (
-                      <div 
-                        className="absolute left-0 top-full mt-2 z-30 p-3 rounded-2xl border shadow-xl flex items-center gap-2 animate-in fade-in"
-                        style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
-                      >
-                        <span className="text-[11px] font-medium shrink-0" style={{ color: 'var(--text-main)' }}>寄景色:</span>
-                        <input
-                          type="color"
-                          value={customColors.homeMottoColor || '#6B7280'}
-                          onChange={(e) => setCustomColors({ homeMottoColor: e.target.value })}
-                          className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
-                        />
-                        {/* Quick recommended swatches */}
-                        {['#6B7280', '#9CA3AF', '#B4783E', '#475569', '#059669', '#7C3AED', '#DB2777'].map((color) => (
-                          <button
-                            key={color}
-                            onClick={() => {
-                              setCustomColors({ homeMottoColor: color });
-                              setShowColorPickerFor(null);
-                            }}
-                            className="w-5 h-5 rounded-full border border-black/10 hover:scale-110 transition-transform"
-                            style={{ backgroundColor: color }}
-                            title={`应用色彩 ${color}`}
-                          />
-                        ))}
-                        <button
-                          onClick={() => setShowColorPickerFor(null)}
-                          className="text-xs p-1 text-neutral-400 hover:text-neutral-700 ml-1"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
@@ -553,8 +551,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             onClick={onOpenAddModal}
             className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-semibold shadow-md hover:shadow-xl hover:scale-102 active:scale-98 transition-all shrink-0 group"
             style={{
-              backgroundColor: 'var(--text-main)',
-              color: 'var(--bg-page)',
+              backgroundColor: 'var(--accent-gold)',
+              color: '#FFFFFF',
             }}
           >
             <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
@@ -590,7 +588,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           >
             <div className="flex items-center justify-between mb-3" style={{ color: 'var(--text-muted)' }}>
               <span className="text-xs font-medium">全部作品</span>
-              <FolderArchive className="w-4 h-4 group-hover:text-amber-600 transition-colors" />
+              <FolderArchive className="w-4 h-4 transition-colors" style={{ color: 'var(--accent-gold)' }} />
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-art-serif text-4xl sm:text-5xl font-bold" style={{ color: 'var(--text-main)' }}>
@@ -611,7 +609,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           >
             <div className="flex items-center justify-between mb-3" style={{ color: 'var(--text-muted)' }}>
               <span className="text-xs font-medium">本月创作</span>
-              <Calendar className="w-4 h-4 group-hover:text-amber-600 transition-colors" />
+              <Calendar className="w-4 h-4 transition-colors" style={{ color: 'var(--accent-gold)' }} />
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-art-serif text-4xl sm:text-5xl font-bold" style={{ color: 'var(--text-main)' }}>
@@ -632,7 +630,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           >
             <div className="flex items-center justify-between mb-3" style={{ color: 'var(--text-muted)' }}>
               <span className="text-xs font-medium">收藏作品</span>
-              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <Star className="w-4 h-4 transition-colors" style={{ color: 'var(--accent-gold)', fill: 'var(--accent-gold)' }} />
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-art-serif text-4xl sm:text-5xl font-bold" style={{ color: 'var(--text-main)' }}>
@@ -689,7 +687,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   {/* Pinned & File Format Badges */}
                   <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
                     {art.isPinned && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-xs">
+                      <span 
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md text-white shadow-xs"
+                        style={{ backgroundColor: 'var(--accent-gold)' }}
+                      >
                         <Pin className="w-2.5 h-2.5 fill-current" />
                         置顶
                       </span>
@@ -735,7 +736,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
               borderColor: 'var(--card-border)',
             }}
           >
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
+            <div 
+              className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center transition-colors"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                color: 'var(--accent-gold)',
+              }}
+            >
               <Palette className="w-6 h-6" />
             </div>
             <div>
@@ -916,14 +923,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       key={p.id}
                       onClick={() => handleSelectAvatar(p.svg)}
-                      className={`p-2.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all text-center group ${
-                        isCur
-                          ? 'border-amber-500 bg-amber-500/10 shadow-xs'
-                          : 'hover:border-amber-400'
-                      }`}
+                      className="p-2.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all text-center group"
                       style={{
                         borderColor: isCur ? 'var(--accent-gold)' : 'var(--card-border)',
-                        backgroundColor: isCur ? 'rgba(194, 142, 90, 0.08)' : 'var(--card-bg)',
+                        backgroundColor: isCur ? 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))' : 'var(--card-bg)',
+                        boxShadow: isCur ? '0 0 0 1px var(--accent-gold)' : undefined,
                       }}
                     >
                       <img src={p.svg} alt={p.name} className="w-10 h-10 rounded-full group-hover:scale-105 transition-transform" />

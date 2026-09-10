@@ -156,7 +156,10 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2 sm:p-4 bg-gradient-to-b from-black/85 via-black/50 to-transparent pointer-events-auto">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
           {artwork.isPinned && (
-            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-xs shrink-0">
+            <span
+              style={{ backgroundColor: 'var(--accent-gold)' }}
+              className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold px-2 py-0.5 rounded-full text-white shadow-xs shrink-0"
+            >
               <Pin className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
               <span className="hidden xs:inline">已置顶</span>
             </span>
@@ -175,8 +178,11 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
             <button
               onClick={() => onTogglePin(artwork.id)}
               title={artwork.isPinned ? '取消置顶' : '置顶本作品'}
+              style={{
+                backgroundColor: artwork.isPinned ? 'var(--accent-gold)' : undefined,
+              }}
               className={`p-1.5 sm:p-2 rounded-full transition-colors ${
-                artwork.isPinned ? 'bg-amber-500 text-white' : 'bg-white/10 hover:bg-white/20 text-neutral-200'
+                artwork.isPinned ? 'text-white shadow-xs' : 'bg-white/10 hover:bg-white/20 text-neutral-200'
               }`}
             >
               <Pin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${artwork.isPinned ? 'fill-current' : ''}`} />
@@ -301,8 +307,11 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                 {onTogglePin && (
                   <button
                     onClick={() => onTogglePin(artwork.id)}
+                    style={{
+                      backgroundColor: artwork.isPinned ? 'var(--accent-gold)' : undefined,
+                    }}
                     className={`p-2.5 rounded-full transition-all ${
-                      artwork.isPinned ? 'bg-amber-500 text-white' : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                      artwork.isPinned ? 'text-white shadow-xs' : 'bg-neutral-800 text-neutral-400 hover:text-white'
                     }`}
                     title={artwork.isPinned ? '已置顶 (点击取消)' : '置顶本作品'}
                   >
@@ -328,12 +337,17 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           </div>
 
           {/* Tags */}
-          <div>
+          <div className="pb-3 border-b" style={{ borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, #2a2e39)' }}>
             <div className="flex flex-wrap gap-1.5">
               {artwork.tags.map((tag, idx) => (
                 <span
                   key={idx}
-                  className="text-xs px-2.5 py-1 rounded-full bg-neutral-800 text-amber-300/90 font-mono border border-neutral-700"
+                  style={{
+                    color: 'var(--accent-gold)',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 45%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, #181b22)',
+                  }}
+                  className="text-xs px-2.5 py-1 rounded-full font-mono border"
                 >
                   #{tag.replace(/^#/, '')}
                 </span>
@@ -387,7 +401,8 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
               </h4>
               <button
                 onClick={() => onAddDiaryForArtwork(artwork)}
-                className="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition-colors"
+                style={{ color: 'var(--accent-gold)' }}
+                className="text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80 cursor-pointer"
               >
                 + 写这幅画的日志
               </button>
@@ -411,19 +426,30 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-neutral-500 italic p-3 rounded-xl bg-neutral-900/30 border border-dashed border-neutral-800 text-center">
-                尚未记录这幅画的日志，点击上方按钮记录画师心得
-              </p>
+              <button
+                onClick={() => onAddDiaryForArtwork(artwork)}
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                  color: 'var(--accent-gold)',
+                }}
+                className="w-full text-xs italic p-3 rounded-xl bg-neutral-900/40 border border-dashed text-center hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <BookPlus className="w-3.5 h-3.5" />
+                尚未记录这幅画的日志，点击添加日记
+              </button>
             )}
           </div>
         </div>
 
         {/* Action Buttons: Edit, Download, Delete */}
-        <div className="pt-6 border-t border-neutral-800 flex items-center gap-2">
+        <div 
+          className="pt-6 border-t flex items-center gap-2"
+          style={{ borderColor: 'color-mix(in srgb, var(--accent-gold) 25%, #2a2e39)' }}
+        >
           <button
             id="btn-detail-edit"
             onClick={() => onEdit(artwork)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium text-neutral-200 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium text-neutral-200 transition-colors cursor-pointer"
           >
             <Edit3 className="w-4 h-4" />
             <span>编辑信息</span>
@@ -432,7 +458,11 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           <button
             id="btn-detail-download"
             onClick={handleDownload}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium text-white transition-colors shadow-sm"
+            style={{
+              backgroundColor: 'var(--accent-gold)',
+              boxShadow: '0 4px 16px color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 active:scale-95 cursor-pointer shadow-sm"
           >
             <Download className="w-4 h-4" />
             <span>{artwork.fileType === 'psd' ? '下载 PSD 档案' : artwork.fileType === 'ai' ? '下载 AI 档案' : '下载原图'}</span>
@@ -441,7 +471,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           <button
             id="btn-detail-delete"
             onClick={() => onDelete(artwork.id)}
-            className="p-2.5 rounded-xl bg-neutral-800 hover:bg-rose-600/80 text-neutral-400 hover:text-white transition-colors"
+            className="p-2.5 rounded-xl bg-neutral-800 hover:bg-rose-600/80 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             title="移至回收站"
           >
             <Trash2 className="w-4 h-4" />

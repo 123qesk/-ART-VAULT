@@ -94,10 +94,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div 
               style={{
                 borderColor: 'var(--card-border)',
+                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+                color: 'var(--accent-gold)',
               }}
-              className="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border flex items-center justify-center text-amber-700 dark:text-amber-400 group-hover:scale-105 transition-transform duration-200"
+              className="w-10 h-10 rounded-xl border flex items-center justify-center group-hover:scale-105 transition-transform duration-200"
             >
-              <Palette className="w-5 h-5" />
+              <Palette className="w-5 h-5" style={{ color: 'var(--accent-gold)' }} />
             </div>
             <div className="flex flex-col">
               <span 
@@ -199,7 +201,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }}
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-full border shadow-2xs hover:opacity-90 transition-all active:scale-95 text-xs font-medium"
               >
-                <Palette className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <Palette className="w-4 h-4 transition-colors" style={{ color: 'var(--accent-gold)' }} />
                 <span className="hidden sm:inline">
                   {THEME_OPTIONS.find((t) => t.id === theme)?.name || '主题外观'}
                 </span>
@@ -253,7 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             <span>{opt.name}</span>
                             <span style={{ color: 'var(--text-muted)' }} className="text-[10px] font-normal">({opt.tag})</span>
                           </div>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />}
+                          {isSelected && <Check className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />}
                         </button>
                       );
                     })}

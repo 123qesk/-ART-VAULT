@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Heart, Pin, Calendar, Eye } from 'lucide-react';
 import { Artwork, StatusItem } from '../types';
 
@@ -17,6 +17,8 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
   onTogglePin,
   customStatuses,
 }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   const getStatusBadge = (statusName: string) => {
     const customMatch = customStatuses?.find((s) => s.name === statusName);
     if (customMatch) {
@@ -41,7 +43,18 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
         return <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">已完成</span>;
       case 'in_progress':
       case '创作中':
-        return <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">创作中</span>;
+        return (
+          <span 
+            className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+              color: 'var(--accent-gold)',
+            }}
+          >
+            创作中
+          </span>
+        );
       case 'draft':
       case '草稿':
         return <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border border-neutral-500/20">草稿</span>;
@@ -57,15 +70,21 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
     <div
       id={`artwork-card-${artwork.id}`}
       onClick={onClick}
-      className={`masonry-item group relative flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-[#181B22] border transition-all duration-300 cursor-pointer transform hover:-translate-y-1 shadow-xs hover:shadow-xl ${
-        artwork.isPinned
-          ? 'border-amber-400/80 dark:border-amber-500/60 ring-1 ring-amber-400/30'
-          : 'border-[#E8E4DC] dark:border-[#262B38]'
-      }`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        borderColor: (isHovered || artwork.isPinned) ? 'var(--accent-gold)' : undefined,
+        boxShadow: isHovered
+          ? '0 12px 28px -4px color-mix(in srgb, var(--accent-gold) 25%, transparent), 0 0 0 1.5px var(--accent-gold)'
+          : artwork.isPinned
+          ? '0 0 0 1.5px var(--accent-gold)'
+          : undefined,
+      }}
+      className="masonry-item group relative flex flex-col h-full rounded-2xl overflow-hidden bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] transition-all duration-300 cursor-pointer transform hover:-translate-y-1 shadow-xs"
     >
-      {/* Artwork Image Container */}
-      <div className="relative w-full overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
-        <div className="overflow-hidden flex items-center justify-center">
+      {/* Artwork Image Container with standardized aspect ratio for uniform module size */}
+      <div className="relative w-full aspect-[4/3] overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
+        <div className="w-full h-full overflow-hidden flex items-center justify-center">
           <img
             src={artwork.imageUrl}
             alt={artwork.title}
@@ -73,7 +92,7 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
             style={{
               transform: artwork.previewScale ? `scale(${artwork.previewScale / 100})` : undefined,
             }}
-            className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
           />
         </div>
 
@@ -82,7 +101,10 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Pinned Badge */}
             {artwork.isPinned && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-sm pointer-events-auto">
+              <span 
+                className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md text-white shadow-sm pointer-events-auto"
+                style={{ backgroundColor: 'var(--accent-gold)' }}
+              >
                 <Pin className="w-3 h-3 fill-current" />
                 置顶
               </span>
@@ -114,9 +136,12 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
                 onClick={onTogglePin}
                 aria-label={artwork.isPinned ? '取消置顶' : '置顶作品'}
                 title={artwork.isPinned ? '取消置顶' : '置顶作品'}
+                style={{
+                  backgroundColor: artwork.isPinned ? 'var(--accent-gold)' : undefined,
+                }}
                 className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 ${
                   artwork.isPinned
-                    ? 'bg-amber-500 text-white shadow-sm scale-105'
+                    ? 'text-white shadow-sm scale-105'
                     : 'bg-black/30 hover:bg-black/60 text-white/80 hover:text-white opacity-80 sm:opacity-0 sm:group-hover:opacity-100'
                 }`}
               >
@@ -154,51 +179,60 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
         </div>
       </div>
 
-      {/* Info Body */}
-      <div className="p-3.5 sm:p-4 flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-            {artwork.title}
-          </h3>
-          <div className="shrink-0">
-            {getStatusBadge(artwork.status)}
+      {/* Info Body with standardized heights */}
+      <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1 gap-2">
+        <div>
+          <div className="flex items-start justify-between gap-2">
+            <h3 
+              style={{
+                color: isHovered ? 'var(--accent-gold)' : undefined,
+              }}
+              className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1 transition-colors"
+            >
+              {artwork.title}
+            </h3>
+            <div className="shrink-0">
+              {getStatusBadge(artwork.status)}
+            </div>
           </div>
+
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed font-light mt-1.5 h-8">
+            {artwork.description || <span className="opacity-0 select-none">暂无描述</span>}
+          </p>
         </div>
 
-        {artwork.description && (
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed font-light">
-            {artwork.description}
-          </p>
-        )}
-
-        {/* Tags */}
-        {artwork.tags && artwork.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {artwork.tags.slice(0, 3).map((tag, idx) => (
-              <span
-                key={idx}
-                className="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono"
-              >
-                #{tag.replace(/^#/, '')}
-              </span>
-            ))}
-            {artwork.tags.length > 3 && (
-              <span className="text-[10px] text-neutral-400 self-center">
+        <div className="flex flex-col gap-2 pt-1">
+          {/* Tags */}
+          <div className="flex items-center flex-wrap gap-1 h-5 overflow-hidden">
+            {artwork.tags && artwork.tags.length > 0 ? (
+              artwork.tags.slice(0, 3).map((tag, idx) => (
+                <span
+                  key={idx}
+                  className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono"
+                >
+                  #{tag.replace(/^#/, '')}
+                </span>
+              ))
+            ) : (
+              <span className="text-[10px] text-neutral-400 opacity-40 font-mono">无标签</span>
+            )}
+            {artwork.tags && artwork.tags.length > 3 && (
+              <span className="text-[10px] text-neutral-400 font-mono">
                 +{artwork.tags.length - 3}
               </span>
             )}
           </div>
-        )}
 
-        {/* Footer Meta */}
-        <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/80 text-[11px] text-neutral-400 dark:text-neutral-500 font-mono">
-          <span className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            {artwork.date}
-          </span>
-          <span>
-            {(artwork.sizeBytes / (1024 * 1024)).toFixed(1)} MB
-          </span>
+          {/* Footer Meta */}
+          <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/80 text-[11px] text-neutral-400 dark:text-neutral-500 font-mono">
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" style={{ color: isHovered ? 'var(--accent-gold)' : undefined }} />
+              {artwork.date}
+            </span>
+            <span>
+              {(artwork.sizeBytes / (1024 * 1024)).toFixed(1)} MB
+            </span>
+          </div>
         </div>
       </div>
     </div>

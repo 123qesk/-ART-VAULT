@@ -107,11 +107,24 @@ const COLOR_PALETTE_PRESETS: { name: string; bgPage: string; cardBg: string; nav
 const MODULE_COLOR_PRESETS = [
   { name: '纯净雅白', cardBg: '#FFFFFF', cardBorder: '#E5E7EB' },
   { name: '象牙温润', cardBg: '#FFFDF9', cardBorder: '#E3DCD0' },
+  { name: '海盐太妃', cardBg: '#FBF6EE', cardBorder: '#EFE2D2' },
   { name: '云阶清灰', cardBg: '#F8FAFC', cardBorder: '#E2E8F0' },
-  { name: '黛黑深室', cardBg: '#141822', cardBorder: '#232A3B' },
+  { name: '燕麦暖杏', cardBg: '#FAF7F2', cardBorder: '#EBE3D7' },
+  { name: '暖阳奶黄', cardBg: '#FEFCE8', cardBorder: '#FEF08A' },
+  { name: '蜜桃甘露', cardBg: '#FFF7ED', cardBorder: '#FFEDD5' },
   { name: '薄樱暖粉', cardBg: '#FFF5F7', cardBorder: '#FCE7F0' },
+  { name: '暮色浆果', cardBg: '#FAF4F7', cardBorder: '#EED9E4' },
+  { name: '淡紫幽兰', cardBg: '#FAF5FF', cardBorder: '#E9D5FF' },
+  { name: '清凉薄荷', cardBg: '#F0FDFA', cardBorder: '#CCFBF1' },
   { name: '浅草嫩绿', cardBg: '#F0FDF4', cardBorder: '#DCFCE7' },
+  { name: '灰苔青岫', cardBg: '#F2F7F4', cardBorder: '#D7E5DC' },
   { name: '冰川澄蓝', cardBg: '#F0F9FF', cardBorder: '#E0F2FE' },
+  { name: '远山黛蓝', cardBg: '#F0F4F8', cardBorder: '#D3DEEA' },
+  { name: '雾霾烟蓝', cardBg: '#F1F5F9', cardBorder: '#CBD5E1' },
+  { name: '深空暗灰', cardBg: '#1C2028', cardBorder: '#2E3544' },
+  { name: '青檀墨绿', cardBg: '#161E1A', cardBorder: '#24332C' },
+  { name: '曜石玄墨', cardBg: '#181B1E', cardBorder: '#292F36' },
+  { name: '黛黑深室', cardBg: '#141822', cardBorder: '#232A3B' },
 ];
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -166,14 +179,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Header Banner */}
       <div className="pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
         <div 
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border mb-2"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border mb-2 transition-colors"
           style={{
-            backgroundColor: 'rgba(194, 142, 90, 0.1)',
-            borderColor: 'rgba(194, 142, 90, 0.25)',
+            backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
             color: 'var(--accent-gold)',
           }}
         >
-          <Settings className="w-3.5 h-3.5" />
+          <Settings className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
           <span>画匣系统设置与模式配置</span>
         </div>
         <h1 className="font-art-serif text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
@@ -186,14 +199,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {importStatus && (
         <div 
-          className="p-4 rounded-2xl border text-xs flex items-center gap-2"
+          className="p-4 rounded-2xl border text-xs flex items-center gap-2 transition-colors"
           style={{
-            backgroundColor: 'rgba(194, 142, 90, 0.1)',
-            borderColor: 'rgba(194, 142, 90, 0.3)',
+            backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
             color: 'var(--accent-gold)',
           }}
         >
-          <Info className="w-4 h-4 shrink-0" />
+          <Info className="w-4 h-4 shrink-0" style={{ color: 'var(--accent-gold)' }} />
           <span>{importStatus}</span>
         </div>
       )}
@@ -210,7 +223,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-              <LayoutTemplate className="w-4 h-4 text-amber-500" />
+              <LayoutTemplate className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
               <span>模式选择</span>
             </h2>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -218,10 +231,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </p>
           </div>
           <span 
-            className="text-xs px-2.5 py-1 rounded-full font-medium border"
+            className="text-xs px-2.5 py-1 rounded-full font-medium border transition-colors"
             style={{
-              backgroundColor: 'rgba(194, 142, 90, 0.1)',
-              borderColor: 'rgba(194, 142, 90, 0.25)',
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
               color: 'var(--accent-gold)',
             }}
           >
@@ -234,24 +247,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {/* Default Mode Card */}
           <div
             onClick={() => setDisplayMode('default')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative overflow-hidden ${
-              displayMode === 'default'
-                ? 'border-amber-500 shadow-xs'
-                : 'hover:border-amber-300'
-            }`}
+            className="p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative overflow-hidden shadow-xs"
             style={{
-              backgroundColor: displayMode === 'default' ? 'rgba(194, 142, 90, 0.05)' : 'var(--card-bg)',
+              backgroundColor: displayMode === 'default' ? 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))' : 'var(--card-bg)',
               borderColor: displayMode === 'default' ? 'var(--accent-gold)' : 'var(--card-border)',
+              boxShadow: displayMode === 'default' ? '0 0 0 1px var(--accent-gold)' : undefined,
             }}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-amber-500" />
+                  <User className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
                   <h3 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
                     默认模式
                   </h3>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-medium">
+                  <span 
+                    className="text-[10px] px-1.5 py-0.5 rounded font-medium border transition-colors"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                      borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                      color: 'var(--accent-gold)',
+                    }}
+                  >
                     展示头像与签名
                   </span>
                 </div>
@@ -260,26 +277,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
               {displayMode === 'default' && (
-                <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3" />
+                <div 
+                  className="w-5 h-5 rounded-full text-white flex items-center justify-center shrink-0 shadow-xs"
+                  style={{ backgroundColor: 'var(--accent-gold)' }}
+                >
+                  <Check className="w-3 h-3 stroke-[2.5]" />
                 </div>
               )}
             </div>
 
             {/* Visual Mini Preview for Default Mode */}
             <div 
-              className="p-2.5 rounded-xl border flex items-center gap-2.5 text-xs"
-              style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
+              className="p-2.5 rounded-xl border flex items-center gap-2.5 text-xs transition-colors"
+              style={{ 
+                backgroundColor: 'var(--bg-page)', 
+                borderColor: displayMode === 'default' 
+                  ? 'color-mix(in srgb, var(--accent-gold) 40%, var(--card-border))' 
+                  : 'var(--card-border)' 
+              }}
             >
-              <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+              <span 
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors"
+                style={{ 
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 20%, transparent)',
+                  color: 'var(--accent-gold)',
+                }}
+              >
                 🎨
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-[11px] truncate" style={{ color: 'var(--text-main)' }}>莫奈画师 · 画室主理人</p>
                 <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>以画笔勾勒世界，用色彩记录生活 ✨</p>
               </div>
-              <span className="text-[10px] text-emerald-500 font-mono shrink-0 flex items-center gap-0.5">
-                <Eye className="w-3 h-3" /> 开启
+              <span 
+                className="text-[10px] font-mono shrink-0 flex items-center gap-0.5 font-medium transition-colors"
+                style={{ color: 'var(--accent-gold)' }}
+              >
+                <Eye className="w-3 h-3" style={{ color: 'var(--accent-gold)' }} /> 开启
               </span>
             </div>
           </div>
@@ -287,24 +321,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {/* Minimal Mode Card */}
           <div
             onClick={() => setDisplayMode('minimal')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative overflow-hidden ${
-              displayMode === 'minimal'
-                ? 'border-amber-500 shadow-xs'
-                : 'hover:border-amber-300'
-            }`}
+            className="p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative overflow-hidden shadow-xs"
             style={{
-              backgroundColor: displayMode === 'minimal' ? 'rgba(194, 142, 90, 0.05)' : 'var(--card-bg)',
+              backgroundColor: displayMode === 'minimal' ? 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))' : 'var(--card-bg)',
               borderColor: displayMode === 'minimal' ? 'var(--accent-gold)' : 'var(--card-border)',
+              boxShadow: displayMode === 'minimal' ? '0 0 0 1px var(--accent-gold)' : undefined,
             }}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <EyeOff className="w-4 h-4 text-amber-500" />
+                  <EyeOff className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
                   <h3 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
                     简洁模式
                   </h3>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium">
+                  <span 
+                    className="text-[10px] px-1.5 py-0.5 rounded font-medium border transition-colors"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                      borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                      color: 'var(--accent-gold)',
+                    }}
+                  >
                     隐藏头像与签名
                   </span>
                 </div>
@@ -313,24 +351,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
               {displayMode === 'minimal' && (
-                <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3" />
+                <div 
+                  className="w-5 h-5 rounded-full text-white flex items-center justify-center shrink-0 shadow-xs"
+                  style={{ backgroundColor: 'var(--accent-gold)' }}
+                >
+                  <Check className="w-3 h-3 stroke-[2.5]" />
                 </div>
               )}
             </div>
 
             {/* Visual Mini Preview for Minimal Mode */}
             <div 
-              className="p-2.5 rounded-xl border flex items-center gap-2.5 text-xs"
-              style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
+              className="p-2.5 rounded-xl border flex items-center gap-2.5 text-xs transition-colors"
+              style={{ 
+                backgroundColor: 'var(--bg-page)', 
+                borderColor: displayMode === 'minimal' 
+                  ? 'color-mix(in srgb, var(--accent-gold) 40%, var(--card-border))' 
+                  : 'var(--card-border)' 
+              }}
             >
-              <Feather className="w-4 h-4 text-neutral-400 shrink-0" />
+              <span 
+                className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-colors"
+                style={{ 
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 20%, transparent)',
+                  color: 'var(--accent-gold)',
+                }}
+              >
+                <Feather className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-[11px] truncate" style={{ color: 'var(--text-main)' }}>你好，画师</p>
                 <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>灵感稍纵即逝，将每一个笔触装入画匣</p>
               </div>
-              <span className="text-[10px] text-neutral-400 font-mono shrink-0 flex items-center gap-0.5">
-                <EyeOff className="w-3 h-3" /> 已隐
+              <span 
+                className="text-[10px] font-mono shrink-0 flex items-center gap-0.5 font-medium transition-colors"
+                style={{ color: 'var(--accent-gold)' }}
+              >
+                <EyeOff className="w-3 h-3" style={{ color: 'var(--accent-gold)' }} /> 已隐
               </span>
             </div>
           </div>
@@ -349,7 +406,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-              <Palette className="w-4 h-4 text-amber-500" />
+              <Palette className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
               <span>界面主题与模块色彩外观</span>
             </h2>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -377,14 +434,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div
                 key={preset.id}
                 onClick={() => setTheme(preset.id)}
-                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative overflow-hidden ${
-                  isSelected
-                    ? 'border-amber-500 shadow-xs'
-                    : 'hover:border-amber-300'
-                }`}
+                className="p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative overflow-hidden shadow-xs"
                 style={{
-                  backgroundColor: isSelected ? 'rgba(194, 142, 90, 0.05)' : 'var(--card-bg)',
+                  backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 6%, var(--card-bg))' : 'var(--card-bg)',
                   borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+                  boxShadow: isSelected ? '0 0 0 1px var(--accent-gold)' : undefined,
                 }}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -397,7 +451,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         {preset.tag}
                       </span>
                       {isSelected && isThemeCustomized && (
-                        <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                        <span 
+                          className="text-[9px] font-medium px-1.5 py-0.5 rounded border transition-colors"
+                          style={{
+                            backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                            borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                            color: 'var(--accent-gold)',
+                          }}
+                        >
                           已自定义
                         </span>
                       )}
@@ -407,8 +468,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </p>
                   </div>
                   {isSelected && (
-                    <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
-                      <Check className="w-3 h-3" />
+                    <div 
+                      className="w-5 h-5 rounded-full text-white flex items-center justify-center shrink-0 shadow-xs"
+                      style={{ backgroundColor: 'var(--accent-gold)' }}
+                    >
+                      <Check className="w-3 h-3 stroke-[2.5]" />
                     </div>
                   )}
                 </div>
@@ -454,7 +518,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
               <span>主体模块底色快捷挑选：</span>
             </span>
             <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
@@ -462,19 +526,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
             {MODULE_COLOR_PRESETS.map((m) => {
               const isCur = customColors.cardBg.toLowerCase() === m.cardBg.toLowerCase();
               return (
                 <button
                   key={m.name}
                   onClick={() => setCustomColors({ cardBg: m.cardBg, cardBorder: m.cardBorder })}
-                  className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition-all ${
-                    isCur ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-xs' : 'hover:border-amber-400'
-                  }`}
+                  className="p-2 rounded-xl border flex flex-col items-center gap-1 transition-all"
                   style={{
                     backgroundColor: m.cardBg,
                     borderColor: isCur ? 'var(--accent-gold)' : m.cardBorder,
+                    boxShadow: isCur ? '0 0 0 2px var(--accent-gold)' : undefined,
                   }}
                 >
                   <span 
@@ -501,7 +564,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3" style={{ borderColor: 'var(--card-border)' }}>
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
-                <Sliders className="w-3.5 h-3.5 text-amber-500" />
+                <Sliders className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
                 <span>精细化色彩调色盘（当前主题：{activePreset.name}）</span>
               </h3>
               <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -529,19 +592,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Color Pickers Grid including Module Color, Greeting & Motto Colors */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Color Pickers Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             
-            {/* 1. 主体模块（卡片）底色 (Requirement 1) */}
+            {/* 1. 主体模块（卡片）底色 */}
             <div 
-              className="p-3 rounded-xl border space-y-1.5 ring-1 ring-amber-500/20"
-              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--accent-gold)' }}
+              className="p-3 rounded-xl border space-y-1.5 transition-all"
+              style={{ 
+                backgroundColor: 'var(--card-bg)', 
+                borderColor: 'var(--accent-gold)',
+                boxShadow: '0 0 0 1px color-mix(in srgb, var(--accent-gold) 40%, transparent)',
+              }}
             >
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold block" style={{ color: 'var(--accent-gold)' }}>
                   主体模块颜色
                 </label>
-                <span className="text-[9px] px-1 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                <span 
+                  className="text-[9px] px-1.5 py-0.5 rounded font-medium border transition-colors"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                    color: 'var(--accent-gold)',
+                  }}
+                >
                   卡片/模块
                 </span>
               </div>
@@ -556,63 +630,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   value={customColors.cardBg}
                   onChange={(e) => setCustomColors({ cardBg: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border"
-                  style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-main)' }}
+                  className="w-full text-xs font-mono px-2 py-1 rounded border focus:outline-none"
+                  style={{ 
+                    backgroundColor: 'var(--bg-page)', 
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, var(--card-border))', 
+                    color: 'var(--text-main)' 
+                  }}
                 />
               </div>
             </div>
 
-            {/* 2. 首页问候语字色 (Requirement 2) */}
-            <div 
-              className="p-3 rounded-xl border space-y-1.5"
-              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
-            >
-              <label className="text-xs font-semibold block" style={{ color: 'var(--text-main)' }}>
-                首页问候语颜色
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={customColors.homeGreetingColor || customColors.textMain || '#111827'}
-                  onChange={(e) => setCustomColors({ homeGreetingColor: e.target.value })}
-                  className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
-                />
-                <input
-                  type="text"
-                  value={customColors.homeGreetingColor || customColors.textMain || '#111827'}
-                  onChange={(e) => setCustomColors({ homeGreetingColor: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border"
-                  style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-main)' }}
-                />
-              </div>
-            </div>
-
-            {/* 3. 首页寄语字色 (Requirement 2) */}
-            <div 
-              className="p-3 rounded-xl border space-y-1.5"
-              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
-            >
-              <label className="text-xs font-semibold block" style={{ color: 'var(--text-main)' }}>
-                首页寄语颜色
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={customColors.homeMottoColor || customColors.textMuted || '#6B7280'}
-                  onChange={(e) => setCustomColors({ homeMottoColor: e.target.value })}
-                  className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
-                />
-                <input
-                  type="text"
-                  value={customColors.homeMottoColor || customColors.textMuted || '#6B7280'}
-                  onChange={(e) => setCustomColors({ homeMottoColor: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border"
-                  style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-main)' }}
-                />
-              </div>
-            </div>
-
-            {/* 4. 顶栏背景色 */}
+            {/* 2. 顶栏背景色 */}
             <div 
               className="p-3 rounded-xl border space-y-1.5"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
@@ -637,7 +665,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            {/* 5. 页面底色 */}
+            {/* 3. 页面底色 */}
             <div 
               className="p-3 rounded-xl border space-y-1.5"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
@@ -662,7 +690,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            {/* 6. 正文主字色 */}
+            {/* 4. 正文主字色 */}
             <div 
               className="p-3 rounded-xl border space-y-1.5"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
@@ -687,7 +715,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            {/* 7. 模块边框分割线 */}
+            {/* 5. 模块边框分割线 */}
             <div 
               className="p-3 rounded-xl border space-y-1.5"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
@@ -712,7 +740,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            {/* 8. 艺术强调色 */}
+            {/* 6. 艺术强调色 */}
             <div 
               className="p-3 rounded-xl border space-y-1.5"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
@@ -738,7 +766,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Real-time Preview of Greeting, Motto and Module Card */}
+          {/* Real-time Preview */}
           <div 
             className="p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
             style={{
@@ -748,13 +776,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           >
             <div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded border" style={{ borderColor: customColors.cardBorder, color: customColors.textMuted }}>
-                实时效果预览（当前主体模块底色）
+                实时效果预览
               </span>
-              <h4 className="font-art-serif text-lg font-bold mt-1.5" style={{ color: customColors.homeGreetingColor || customColors.textMain }}>
-                你好，画师（问候语预览）
+              <h4 className="font-art-serif text-lg font-bold mt-1.5" style={{ color: customColors.textMain }}>
+                你好，画师
               </h4>
-              <p className="text-xs mt-0.5" style={{ color: customColors.homeMottoColor || customColors.textMuted }}>
-                今天也来画点什么吧。灵感稍纵即逝，将每一个笔触与故事装入画匣。（寄语预览）
+              <p className="text-xs mt-0.5" style={{ color: customColors.textMuted }}>
+                今天也来画点什么吧。 灵感稍纵即逝，将每一个笔触与故事装入画匣。 
               </p>
             </div>
             <span 
@@ -779,7 +807,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-              <Database className="w-4 h-4 text-amber-500" />
+              <Database className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
               <span>数据存储与备份 (IndexedDB)</span>
             </h2>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
@@ -856,11 +884,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Reset to defaults */}
+        {/* Reset data */}
         <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ borderColor: 'var(--card-border)' }}>
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            <p className="font-semibold" style={{ color: 'var(--text-main)' }}>重置示例演示数据</p>
-            <p>恢复预置的 7 张艺术作品《雨夜》《少女》《森林》及示范日记。</p>
+            <p className="font-semibold" style={{ color: 'var(--text-main)' }}>重置数据</p>
+            <p>清除画匣所有数据</p>
           </div>
 
           {isResetConfirming ? (
@@ -893,7 +921,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               }}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>重置为精美预置画作</span>
+              <span>重置</span>
             </button>
           )}
         </div>

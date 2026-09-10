@@ -190,8 +190,15 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-[#E8E4DC] dark:border-[#262B38]">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 mb-2">
-            <BarChart3 className="w-3.5 h-3.5" />
+          <div 
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border mb-2 transition-colors"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+              color: 'var(--accent-gold)',
+            }}
+          >
+            <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
             <span>画师数字足迹与产出统计</span>
           </div>
           <h1 className="font-art-serif text-3xl font-bold text-neutral-900 dark:text-neutral-100">
@@ -205,7 +212,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
         {/* Current Active Filter Badge */}
         <div className="text-right">
           <span className="text-xs text-neutral-400 block font-mono">当前查看范围</span>
-          <span className="text-sm sm:text-base font-bold text-amber-600 dark:text-amber-400 font-art-serif">
+          <span className="text-sm sm:text-base font-bold font-art-serif" style={{ color: 'var(--accent-gold)' }}>
             {currentScopeTitle}
           </span>
         </div>
@@ -218,7 +225,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-300">
-            <Calendar className="w-4 h-4 text-amber-500" />
+            <Calendar className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
             <span>日期统计范围切换:</span>
           </div>
 
@@ -226,9 +233,10 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
           <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl text-xs">
             <button
               onClick={() => setScopeMode('all')}
+              style={scopeMode === 'all' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 scopeMode === 'all'
-                  ? 'bg-white dark:bg-neutral-700 font-bold text-neutral-900 dark:text-white shadow-xs'
+                  ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
@@ -236,9 +244,10 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             </button>
             <button
               onClick={() => setScopeMode('year')}
+              style={scopeMode === 'year' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 scopeMode === 'year'
-                  ? 'bg-white dark:bg-neutral-700 font-bold text-neutral-900 dark:text-white shadow-xs'
+                  ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
@@ -246,9 +255,10 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             </button>
             <button
               onClick={() => setScopeMode('month')}
+              style={scopeMode === 'month' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 scopeMode === 'month'
-                  ? 'bg-white dark:bg-neutral-700 font-bold text-neutral-900 dark:text-white shadow-xs'
+                  ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
@@ -256,9 +266,10 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             </button>
             <button
               onClick={() => setScopeMode('day')}
+              style={scopeMode === 'day' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 scopeMode === 'day'
-                  ? 'bg-white dark:bg-neutral-700 font-bold text-neutral-900 dark:text-white shadow-xs'
+                  ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
@@ -266,9 +277,10 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             </button>
             <button
               onClick={() => setScopeMode('range')}
+              style={scopeMode === 'range' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 scopeMode === 'range'
-                  ? 'bg-white dark:bg-neutral-700 font-bold text-neutral-900 dark:text-white shadow-xs'
+                  ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
             >
@@ -402,7 +414,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             <span className="text-xs text-neutral-400 font-mono">天</span>
           </div>
           <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 font-mono">
-            <Calendar className="w-3.5 h-3.5 text-amber-500" />
+            <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
             <span>有产出或写日志的天数</span>
           </div>
         </div>
@@ -412,13 +424,13 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             心仪收藏
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="font-art-serif text-3xl sm:text-4xl font-bold text-amber-600 dark:text-amber-400">
+            <span className="font-art-serif text-3xl sm:text-4xl font-bold" style={{ color: 'var(--accent-gold)' }}>
               {favoriteCount}
             </span>
             <span className="text-xs text-neutral-400 font-mono">件</span>
           </div>
           <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 font-mono">
-            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+            <Star className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)', fill: 'var(--accent-gold)' }} />
             <span>占比 {totalArtworks > 0 ? Math.round((favoriteCount / totalArtworks) * 100) : 0}%</span>
           </div>
         </div>
@@ -434,7 +446,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             <span className="text-xs text-neutral-400 font-mono">篇</span>
           </div>
           <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 font-mono">
-            <BookOpen className="w-3.5 h-3.5 text-sky-500" />
+            <BookOpen className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
             <span>文字心得记录</span>
           </div>
         </div>
@@ -465,16 +477,25 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
               return (
                 <div key={item.month} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
                   {/* Tooltip & Value */}
-                  <span className={`text-[11px] font-mono transition-opacity ${hasWorks ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-neutral-300 dark:text-neutral-700'}`}>
+                  <span 
+                    className="text-[11px] font-mono transition-opacity"
+                    style={{
+                      color: hasWorks ? 'var(--accent-gold)' : undefined,
+                      fontWeight: hasWorks ? 700 : 400,
+                    }}
+                  >
                     {item.count}
                   </span>
 
                   {/* Bar */}
                   <div
-                    style={{ height: `${heightPercent}%` }}
+                    style={{ 
+                      height: `${heightPercent}%`,
+                      backgroundColor: hasWorks ? 'var(--accent-gold)' : undefined,
+                    }}
                     className={`w-full max-w-[28px] rounded-t-md transition-all duration-500 ${
                       hasWorks
-                        ? 'bg-neutral-900 group-hover:bg-amber-600 dark:bg-neutral-100 dark:group-hover:bg-amber-400 shadow-xs'
+                        ? 'shadow-xs hover:opacity-85'
                         : 'bg-neutral-100 dark:bg-neutral-800/60'
                     }`}
                   />
@@ -496,7 +517,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
         {/* Most painted types */}
         <div className="p-6 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs space-y-4">
           <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-amber-500" />
+            <Layers className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
             <span>创作类型偏好 ({typeStats.length})</span>
           </h3>
 
@@ -510,8 +531,8 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
                   </div>
                   <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
                     <div
-                      style={{ width: `${t.percent}%` }}
-                      className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                      style={{ width: `${t.percent}%`, backgroundColor: 'var(--accent-gold)' }}
+                      className="h-full rounded-full transition-all duration-500"
                     />
                   </div>
                 </div>
@@ -525,7 +546,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
         {/* Most frequent tags */}
         <div className="p-6 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs space-y-4">
           <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-500" />
+            <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
             <span>最常用创作标签</span>
           </h3>
 
@@ -537,7 +558,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-xs font-mono"
                 >
                   <span className="font-semibold text-neutral-800 dark:text-neutral-200">#{tag}</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-bold">×{count}</span>
+                  <span className="font-bold" style={{ color: 'var(--accent-gold)' }}>×{count}</span>
                 </div>
               ))}
             </div>
@@ -561,8 +582,15 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {Object.entries(statusStats).length > 0 ? (
             Object.entries(statusStats).map(([stName, cnt]) => (
-              <div key={stName} className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
-                <span className="text-xs text-amber-700 dark:text-amber-300 block font-medium">{stName}</span>
+              <div 
+                key={stName} 
+                className="p-3.5 rounded-xl border text-center transition-colors"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                }}
+              >
+                <span className="text-xs block font-semibold" style={{ color: 'var(--accent-gold)' }}>{stName}</span>
                 <span className="font-art-serif text-2xl font-bold text-neutral-900 dark:text-neutral-100 mt-1 block">
                   {cnt}
                 </span>

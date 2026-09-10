@@ -116,8 +116,15 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E8E4DC] dark:border-[#262B38]">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 mb-2">
-            <BookOpen className="w-3.5 h-3.5" />
+          <div 
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border mb-2 transition-colors"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+              color: 'var(--accent-gold)',
+            }}
+          >
+            <BookOpen className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
             <span>作品 + 日记 创作空间</span>
           </div>
           <h1 className="font-art-serif text-3xl font-bold text-neutral-900 dark:text-neutral-100">
@@ -131,7 +138,10 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
         <button
           id="btn-new-diary"
           onClick={() => handleOpenAdd(preselectedArtwork)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-sm font-semibold shadow-sm hover:shadow active:scale-95 transition-all shrink-0"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:shadow active:scale-95 transition-all shrink-0 text-white"
+          style={{
+            backgroundColor: 'var(--accent-gold)',
+          }}
         >
           <Plus className="w-4 h-4" />
           <span>写创作日记</span>
@@ -189,14 +199,17 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                       className="relative pl-8 group"
                     >
                       {/* Timeline dot */}
-                      <div className="absolute left-2.5 top-5 w-3 h-3 rounded-full bg-amber-500 border-2 border-white dark:border-[#101216] -translate-x-1/2 group-hover:scale-125 transition-transform duration-200 shadow-xs" />
+                      <div 
+                        className="absolute left-2.5 top-5 w-3 h-3 rounded-full border-2 border-white dark:border-[#101216] -translate-x-1/2 group-hover:scale-125 transition-transform duration-200 shadow-xs"
+                        style={{ backgroundColor: 'var(--accent-gold)' }}
+                      />
 
                       <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs hover:shadow-md transition-all space-y-3">
                         {/* Header: Date + Title + Associated Art Badge */}
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
-                              <span className="font-semibold text-amber-600 dark:text-amber-400">
+                              <span className="font-semibold" style={{ color: 'var(--accent-gold)' }}>
                                 {fullDate}
                               </span>
                               {diary.artworkTitle && (
@@ -251,7 +264,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                               <span className="text-neutral-500 block font-mono">
                                 {matchedArt.type} · {matchedArt.width} × {matchedArt.height}
                               </span>
-                              <span className="text-amber-600 dark:text-amber-400 font-medium text-[11px] inline-flex items-center gap-1">
+                              <span className="font-medium text-[11px] inline-flex items-center gap-1" style={{ color: 'var(--accent-gold)' }}>
                                 点击进入大图查看 →
                               </span>
                             </div>
@@ -287,7 +300,13 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
       ) : (
         /* Empty State */
         <div className="py-20 rounded-3xl bg-white dark:bg-[#181B22] border border-dashed border-[#E8E4DC] dark:border-[#262B38] text-center p-8 space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+          <div 
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto transition-colors"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+              color: 'var(--accent-gold)',
+            }}
+          >
             <BookOpen className="w-8 h-8" />
           </div>
           <div className="space-y-1 max-w-sm mx-auto">
@@ -300,7 +319,8 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
           </div>
           <button
             onClick={() => handleOpenAdd()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-medium shadow-sm"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-xs font-medium shadow-sm transition-all active:scale-95"
+            style={{ backgroundColor: 'var(--accent-gold)' }}
           >
             <Plus className="w-4 h-4" />
             <span>写第一篇日志</span>
@@ -408,7 +428,8 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-medium bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+                  className="px-5 py-2 rounded-xl text-xs font-medium text-white shadow-sm transition-all active:scale-95"
+                  style={{ backgroundColor: 'var(--accent-gold)' }}
                 >
                   保存日志
                 </button>

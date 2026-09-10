@@ -49,6 +49,176 @@ interface GalleryViewProps {
 type DateFilter = 'all' | 'today' | '7days' | '30days' | 'year';
 type SortOrder = 'pinned_first' | 'newest' | 'oldest' | 'title' | 'largest';
 
+const GalleryListRow: React.FC<{
+  art: Artwork;
+  onSelect: (art: Artwork) => void;
+  onTogglePin: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
+}> = ({ art, onSelect, onTogglePin, onToggleFavorite }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      onClick={() => onSelect(art)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        borderColor: (isHovered || art.isPinned) ? 'var(--accent-gold)' : undefined,
+        boxShadow: isHovered
+          ? '0 10px 26px -4px color-mix(in srgb, var(--accent-gold) 22%, transparent), 0 0 0 1.5px var(--accent-gold)'
+          : art.isPinned
+          ? '0 0 0 1.5px var(--accent-gold)'
+          : undefined,
+      }}
+      className="group relative flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-white dark:bg-[#181B22] border transition-all duration-200 cursor-pointer border-[#E8E4DC] dark:border-[#262B38]"
+    >
+      {/* Left Thumbnail */}
+      <div className="relative w-full sm:w-44 h-36 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
+        {art.mediaType === 'video' || art.fileType === 'video' ? (
+          <video
+            src={art.imageUrl}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            muted
+            loop
+            playsInline
+            autoPlay
+          />
+        ) : (
+          <img
+            src={art.imageUrl}
+            alt={art.title}
+            style={{
+              transform: art.previewScale ? `scale(${art.previewScale / 100})` : undefined,
+            }}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        )}
+        {art.isPinned && (
+          <span 
+            style={{ backgroundColor: 'var(--accent-gold)' }}
+            className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded text-white shadow-xs"
+          >
+            <Pin className="w-2.5 h-2.5 fill-current" /> 置顶
+          </span>
+        )}
+        {art.fileType === 'video' && (
+          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-600 text-white uppercase shadow-xs">
+            VIDEO
+          </span>
+        )}
+        {art.fileType === 'gif' && (
+          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-pink-600 text-white uppercase shadow-xs">
+            GIF
+          </span>
+        )}
+        {art.fileType === 'psd' && (
+          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white uppercase shadow-xs">
+            PSD
+          </span>
+        )}
+        {art.fileType === 'ai' && (
+          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-600 text-white shadow-xs">
+            AI
+          </span>
+        )}
+      </div>
+
+      {/* Right Meta Info */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-1 w-full">
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 
+                style={{ color: isHovered ? 'var(--accent-gold)' : undefined }}
+                className="font-art-serif text-base sm:text-lg font-bold text-neutral-900 dark:text-neutral-100 transition-colors"
+              >
+                《{art.title}》
+              </h3>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono">
+                {art.type}
+              </span>
+              <span 
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                  color: 'var(--accent-gold)',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                }}
+                className="text-xs px-2.5 py-0.5 rounded-full font-medium border"
+              >
+                {art.status}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => onTogglePin(art.id)}
+                style={{
+                  backgroundColor: art.isPinned ? 'var(--accent-gold)' : undefined,
+                  borderColor: art.isPinned ? 'var(--accent-gold)' : isHovered ? 'var(--accent-gold)' : undefined,
+                  color: art.isPinned ? '#FFFFFF' : isHovered ? 'var(--accent-gold)' : undefined,
+                }}
+                className={`p-2 rounded-xl border transition-all ${
+                  art.isPinned ? 'shadow-xs' : 'text-neutral-400 hover:text-white border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+                title={art.isPinned ? '取消置顶' : '置顶本作品'}
+              >
+                <Pin className={`w-4 h-4 ${art.isPinned ? 'fill-current' : ''}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleFavorite(art.id)}
+                className={`p-2 rounded-xl border transition-colors ${
+                  art.isFavorite ? 'bg-rose-500 text-white border-rose-500 shadow-xs' : 'text-neutral-400 hover:text-rose-500 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+                title={art.isFavorite ? '已收藏' : '加入收藏'}
+              >
+                <Heart className={`w-4 h-4 ${art.isFavorite ? 'fill-current' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          {art.description && (
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 mt-1.5 leading-relaxed font-light">
+              {art.description}
+            </p>
+          )}
+
+          {art.tags && art.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {art.tags.map((t, idx) => (
+                <span 
+                  key={idx} 
+                  style={{
+                    borderColor: isHovered ? 'color-mix(in srgb, var(--accent-gold) 35%, transparent)' : undefined,
+                  }}
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono border border-transparent"
+                >
+                  #{t.replace(/^#/, '')}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* List Row Footer */}
+        <div 
+          style={{ borderColor: 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-border, #2a2e39))' }}
+          className="flex items-center justify-between pt-3 mt-2 border-t text-[11px] text-neutral-400 font-mono"
+        >
+          <span className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" style={{ color: isHovered ? 'var(--accent-gold)' : undefined }} />
+            {art.date}
+          </span>
+          <span>
+            {art.width} × {art.height} · {(art.sizeBytes / (1024 * 1024)).toFixed(1)} MB
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const GalleryView: React.FC<GalleryViewProps> = ({
   artworks,
   deletedArtworks,
@@ -217,12 +387,18 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
       <div className="md:hidden w-full pb-2 mb-4 space-y-2">
         <div className="flex items-center justify-between gap-2 px-1">
           <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 font-art-serif flex items-center gap-1.5">
-            <Folder className="w-3.5 h-3.5 text-amber-500" />
+            <Folder className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
             <span>分类速选</span>
           </span>
           <div className="flex items-center gap-1.5">
             {selectedTag && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono">
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                  color: 'var(--accent-gold)',
+                }}
+              >
                 #{selectedTag}
                 <button onClick={() => setSelectedTag('')} className="p-0.5 hover:text-rose-500">✕</button>
               </span>
@@ -233,7 +409,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               onClick={() => setIsMobileFilterDrawerOpen(true)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 active:scale-95"
             >
-              <Filter className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+              <Filter className="w-3 h-3" style={{ color: 'var(--accent-gold)' }} />
               <span>筛选/标签</span>
             </button>
           </div>
@@ -254,13 +430,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
           <button
             onClick={() => { setSelectedCategory('favorites'); setSelectedTag(''); }}
+            style={{
+              backgroundColor: selectedCategory === 'favorites' ? 'var(--accent-gold)' : undefined,
+              color: selectedCategory === 'favorites' ? '#FFFFFF' : undefined,
+            }}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
               selectedCategory === 'favorites'
-                ? 'bg-amber-500 text-white shadow-xs font-bold'
+                ? 'shadow-xs font-bold'
                 : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800'
             }`}
           >
-            <Star className="w-3 h-3 fill-current text-amber-400" />
+            <Star className={`w-3 h-3 ${selectedCategory === 'favorites' ? 'fill-white text-white' : 'fill-amber-400 text-amber-400'}`} />
             <span>收藏 ({categoryCounts.favorites})</span>
           </button>
 
@@ -355,14 +535,18 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               <button
                 id="cat-btn-favorites"
                 onClick={() => { setSelectedCategory('favorites'); setSelectedTag(''); }}
+                style={{
+                  backgroundColor: selectedCategory === 'favorites' ? 'var(--accent-gold)' : undefined,
+                  color: selectedCategory === 'favorites' ? '#FFFFFF' : undefined,
+                }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                   selectedCategory === 'favorites'
-                    ? 'bg-amber-500 text-white'
+                    ? 'font-bold'
                     : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <Star className={`w-4 h-4 ${selectedCategory === 'favorites' ? 'fill-white text-white' : ''}`} style={selectedCategory !== 'favorites' ? { color: 'var(--accent-gold)', fill: 'var(--accent-gold)' } : undefined} />
                   <span>收藏作品</span>
                 </span>
                 <span className="text-xs font-mono opacity-80">{categoryCounts.favorites}</span>
@@ -399,9 +583,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                     <button
                       key={tag}
                       onClick={() => setSelectedTag(isSelected ? '' : tag)}
+                      style={{
+                        backgroundColor: isSelected ? 'var(--accent-gold)' : undefined,
+                        color: isSelected ? '#FFFFFF' : undefined,
+                      }}
                       className={`text-xs px-2.5 py-1 rounded-full font-mono transition-colors ${
                         isSelected
-                          ? 'bg-amber-600 text-white font-semibold'
+                          ? 'font-semibold shadow-xs'
                           : 'bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
                       }`}
                     >
@@ -621,9 +809,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           {/* Gallery Content Area: Conditional Rendering based on Layout */}
           {filteredArtworks.length > 0 ? (
             <div>
-              {/* 1. MASONRY LAYOUT */}
+              {/* 1. MASONRY / UNIFORM MODULE GRID LAYOUT */}
               {layoutMode === 'masonry' && (
-                <div className={masonryColumns === 2 ? 'masonry-grid-2' : masonryColumns === 4 ? 'masonry-grid-4' : 'masonry-grid-3'}>
+                <div className={
+                  masonryColumns === 1
+                    ? 'grid grid-cols-1 gap-4 sm:gap-6 items-stretch'
+                    : masonryColumns === 2
+                    ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 items-stretch'
+                    : masonryColumns === 4
+                    ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 items-stretch'
+                    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch'
+                }>
                   {filteredArtworks.map((art) => (
                     <ArtworkCard
                       key={art.id}
@@ -643,136 +839,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 </div>
               )}
 
-              {/* 2. LIST LAYOUT */}
+              {/* 2. LIST LAYOUT WITH THEME AWARE HOVER & PIN */}
               {layoutMode === 'list' && (
                 <div className="space-y-3">
                   {filteredArtworks.map((art) => (
-                    <div
+                    <GalleryListRow
                       key={art.id}
-                      onClick={() => onSelectArtwork(art)}
-                      className={`group relative flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-white dark:bg-[#181B22] border transition-all cursor-pointer hover:shadow-md ${
-                        art.isPinned
-                          ? 'border-amber-400 dark:border-amber-500/70 ring-1 ring-amber-400/20'
-                          : 'border-[#E8E4DC] dark:border-[#262B38]'
-                      }`}
-                    >
-                      {/* Left Thumbnail */}
-                      <div className="relative w-full sm:w-44 h-36 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
-                        {art.mediaType === 'video' || art.fileType === 'video' ? (
-                          <video
-                            src={art.imageUrl}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            muted
-                            loop
-                            playsInline
-                            autoPlay
-                          />
-                        ) : (
-                          <img
-                            src={art.imageUrl}
-                            alt={art.title}
-                            style={{
-                              transform: art.previewScale ? `scale(${art.previewScale / 100})` : undefined,
-                            }}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        )}
-                        {art.isPinned && (
-                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500 text-white shadow-xs">
-                            <Pin className="w-2.5 h-2.5 fill-current" /> 置顶
-                          </span>
-                        )}
-                        {art.fileType === 'video' && (
-                          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-600 text-white uppercase shadow-xs">
-                            VIDEO
-                          </span>
-                        )}
-                        {art.fileType === 'gif' && (
-                          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-pink-600 text-white uppercase shadow-xs">
-                            GIF
-                          </span>
-                        )}
-                        {art.fileType === 'psd' && (
-                          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white uppercase shadow-xs">
-                            PSD
-                          </span>
-                        )}
-                        {art.fileType === 'ai' && (
-                          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-600 text-white uppercase shadow-xs">
-                            AI
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Right Meta Info */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-1">
-                        <div>
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-art-serif text-base sm:text-lg font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                                《{art.title}》
-                              </h3>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono">
-                                {art.type}
-                              </span>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium">
-                                {art.status}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                type="button"
-                                onClick={() => onTogglePin(art.id)}
-                                className={`p-2 rounded-xl border transition-colors ${
-                                  art.isPinned ? 'bg-amber-500 text-white border-amber-500' : 'text-neutral-400 hover:text-amber-500 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                                }`}
-                                title={art.isPinned ? '取消置顶' : '置顶本作品'}
-                              >
-                                <Pin className={`w-4 h-4 ${art.isPinned ? 'fill-current' : ''}`} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onToggleFavorite(art.id)}
-                                className={`p-2 rounded-xl border transition-colors ${
-                                  art.isFavorite ? 'bg-rose-500 text-white border-rose-500' : 'text-neutral-400 hover:text-rose-500 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                                }`}
-                                title={art.isFavorite ? '已收藏' : '加入收藏'}
-                              >
-                                <Heart className={`w-4 h-4 ${art.isFavorite ? 'fill-current' : ''}`} />
-                              </button>
-                            </div>
-                          </div>
-
-                          {art.description && (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 mt-1.5 leading-relaxed font-light">
-                              {art.description}
-                            </p>
-                          )}
-
-                          {art.tags && art.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                              {art.tags.map((t, idx) => (
-                                <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-mono">
-                                  #{t.replace(/^#/, '')}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* List Row Footer */}
-                        <div className="flex items-center justify-between pt-3 mt-2 border-t border-neutral-100 dark:border-neutral-800/80 text-[11px] text-neutral-400 font-mono">
-                          <span className="flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {art.date}
-                          </span>
-                          <span>
-                            {art.width} × {art.height} · {(art.sizeBytes / (1024 * 1024)).toFixed(1)} MB
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      art={art}
+                      onSelect={onSelectArtwork}
+                      onTogglePin={onTogglePin}
+                      onToggleFavorite={onToggleFavorite}
+                    />
                   ))}
                 </div>
               )}
@@ -780,8 +857,14 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           ) : (
             /* Empty State */
             <div className="p-12 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] text-center space-y-4 shadow-xs">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
-                <Folder className="w-7 h-7" />
+              <div 
+                className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center transition-colors"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                  color: 'var(--accent-gold)',
+                }}
+              >
+                <Folder className="w-7 h-7" style={{ color: 'var(--accent-gold)' }} />
               </div>
               <div className="space-y-1">
                 <h3 className="font-art-serif text-lg font-bold text-neutral-900 dark:text-neutral-100">

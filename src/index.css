@@ -116,6 +116,20 @@
     background-color: var(--card-bg);
     border-color: var(--card-border);
   }
+
+}
+
+/* Global theme-aware text selection */
+*::selection,
+::selection {
+  background-color: var(--accent-gold) !important;
+  color: #FFFFFF !important;
+}
+
+*::-moz-selection,
+::-moz-selection {
+  background-color: var(--accent-gold) !important;
+  color: #FFFFFF !important;
 }
 
 /* Custom delicate scrollbar */

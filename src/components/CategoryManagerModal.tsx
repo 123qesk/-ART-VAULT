@@ -135,20 +135,28 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
         <div className="flex px-4 sm:px-6 pt-3 sm:pt-4 gap-2 border-b border-neutral-100 dark:border-neutral-800">
           <button
             onClick={() => setActiveTab('categories')}
-            className={`pb-3 px-2 text-xs sm:text-sm font-medium border-b-2 transition-all ${
+            style={{
+              borderColor: activeTab === 'categories' ? 'var(--accent-gold)' : 'transparent',
+              color: activeTab === 'categories' ? 'var(--accent-gold)' : undefined,
+            }}
+            className={`pb-3 px-2 text-xs sm:text-sm font-medium border-b-2 transition-all cursor-pointer ${
               activeTab === 'categories'
-                ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-bold'
-                : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                ? 'font-bold'
+                : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
             自定义分类 ({localCategories.length})
           </button>
           <button
             onClick={() => setActiveTab('statuses')}
-            className={`pb-3 px-2 text-xs sm:text-sm font-medium border-b-2 transition-all ${
+            style={{
+              borderColor: activeTab === 'statuses' ? 'var(--accent-gold)' : 'transparent',
+              color: activeTab === 'statuses' ? 'var(--accent-gold)' : undefined,
+            }}
+            className={`pb-3 px-2 text-xs sm:text-sm font-medium border-b-2 transition-all cursor-pointer ${
               activeTab === 'statuses'
-                ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-bold'
-                : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                ? 'font-bold'
+                : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
             自定义创作状态 ({localStatuses.length})
@@ -166,12 +174,13 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
                   placeholder="输入新分类名称 (如: 场景速写, 厚涂头像)..."
-                  className="flex-1 px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="flex-1 px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!newCatName.trim()}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all shrink-0"
+                  style={{ backgroundColor: 'var(--accent-gold)' }}
+                  className="px-4 py-2 rounded-xl hover:opacity-90 disabled:opacity-50 text-white text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all shrink-0 cursor-pointer shadow-xs"
                 >
                   <Plus className="w-4 h-4" />
                   <span>添加分类</span>
@@ -190,10 +199,14 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                     onDragStart={() => handleCatDragStart(idx)}
                     onDragOver={(e) => handleCatDragOver(e, idx)}
                     onDragEnd={() => setDraggedCatIndex(null)}
+                    style={{
+                      borderColor: draggedCatIndex === idx ? 'var(--accent-gold)' : undefined,
+                      backgroundColor: draggedCatIndex === idx ? 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))' : undefined,
+                    }}
                     className={`flex items-center justify-between p-3 rounded-xl border bg-white dark:bg-[#12141A] transition-all cursor-move select-none ${
                       draggedCatIndex === idx
-                        ? 'border-amber-500 shadow-md bg-amber-500/5'
-                        : 'border-neutral-200 dark:border-neutral-800 hover:border-amber-500/50'
+                        ? 'shadow-md'
+                        : 'border-neutral-200 dark:border-neutral-800'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
@@ -210,7 +223,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteCategory(cat.id)}
-                        className="p-1.5 text-neutral-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                        className="p-1.5 text-neutral-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
                         title="删除分类"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -230,12 +243,13 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                     value={newStatusName}
                     onChange={(e) => setNewStatusName(e.target.value)}
                     placeholder="输入新状态 (如: 构思中, 待交稿, 绝赞连载)..."
-                    className="flex-1 px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-white dark:bg-[#181B22] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    className="flex-1 px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-white dark:bg-[#181B22] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   />
                   <button
                     type="submit"
                     disabled={!newStatusName.trim()}
-                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all shrink-0"
+                    style={{ backgroundColor: 'var(--accent-gold)' }}
+                    className="px-4 py-2 rounded-xl hover:opacity-90 disabled:opacity-50 text-white text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all shrink-0 cursor-pointer shadow-xs"
                   >
                     <Plus className="w-4 h-4" />
                     <span>添加状态</span>
@@ -257,7 +271,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       key={c.key}
                       type="button"
                       onClick={() => setNewStatusColor(c.key)}
-                      className={`w-5 h-5 rounded-full ${c.bg} flex items-center justify-center transition-transform ${
+                      className={`w-5 h-5 rounded-full ${c.bg} flex items-center justify-center transition-transform cursor-pointer ${
                         newStatusColor === c.key ? 'ring-2 ring-offset-2 ring-neutral-800 scale-110' : 'opacity-70'
                       }`}
                       title={c.label}
@@ -278,10 +292,14 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                     onDragStart={() => handleStatusDragStart(idx)}
                     onDragOver={(e) => handleStatusDragOver(e, idx)}
                     onDragEnd={() => setDraggedStatusIndex(null)}
+                    style={{
+                      borderColor: draggedStatusIndex === idx ? 'var(--accent-gold)' : undefined,
+                      backgroundColor: draggedStatusIndex === idx ? 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))' : undefined,
+                    }}
                     className={`flex items-center justify-between p-3 rounded-xl border bg-white dark:bg-[#12141A] transition-all cursor-move select-none ${
                       draggedStatusIndex === idx
-                        ? 'border-amber-500 shadow-md bg-amber-500/5'
-                        : 'border-neutral-200 dark:border-neutral-800 hover:border-amber-500/50'
+                        ? 'shadow-md'
+                        : 'border-neutral-200 dark:border-neutral-800'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
@@ -301,7 +319,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteStatus(st.id)}
-                        className="p-1.5 text-neutral-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                        className="p-1.5 text-neutral-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
                         title="删除状态"
                       >
                         <Trash2 className="w-4 h-4" />

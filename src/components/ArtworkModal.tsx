@@ -10,9 +10,23 @@ import {
   Plus, 
   Sliders, 
   RotateCcw,
-  Check
+  Check,
+  Trash2,
+  Files
 } from 'lucide-react';
 import { Artwork, CategoryItem, StatusItem } from '../types';
+
+export interface BatchFileItem {
+  id: string;
+  file: File;
+  title: string;
+  imageUrl: string;
+  fileType: 'image' | 'psd' | 'ai';
+  fileName: string;
+  width: number;
+  height: number;
+  sizeBytes: number;
+}
 
 interface ArtworkModalProps {
   isOpen: boolean;
@@ -100,6 +114,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const [isFavorite, setIsFavorite] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [batchProgress, setBatchProgress] = useState('');
+  const [batchFiles, setBatchFiles] = useState<BatchFileItem[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -107,9 +123,18 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const [isAddingNewCat, setIsAddingNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState('');
 
+  // Custom Tag input state (Requirement 1)
+  const [customTagInput, setCustomTagInput] = useState('');
+  const [userCustomTags, setUserCustomTags] = useState<string[]>(() => {
+    const saved = localStorage.getItem('art_vault_custom_user_tags');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
+    setBatchFiles([]);
+    setBatchProgress('');
     if (editArtwork) {
       setTitle(editArtwork.title);
       setType(editArtwork.type);
@@ -127,10 +152,10 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       setIsFavorite(editArtwork.isFavorite);
       setIsPinned(!!editArtwork.isPinned);
     } else {
-      // Reset form
+      // Reset form - start with empty tags so user chooses their own
       setTitle('');
       setType(categories[0]?.name || '插画');
-      setTagsInput('#原创 #作品');
+      setTagsInput('');
       setDate(new Date().toISOString().split('T')[0]);
       setStatus(statuses[0]?.name || '已完成');
       setDescription('');
@@ -149,62 +174,172 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleFileProcess = (file: File) => {
-    const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    setSizeBytes(file.size);
-    setFileName(file.name);
+  const processSingleFile = (file: File): Promise<BatchFileItem> => {
+    return new Promise((resolve, reject) => {
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const cleanName = file.name.replace(/\.[^/.]+$/, '');
+      const id = `batch-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-    if (ext === 'psd') {
-      setFileType('psd');
-      const placeholder = generateFilePlaceholder(file.name, 'psd', file.size);
-      setImageUrl(placeholder);
-      setWidth(4000);
-      setHeight(3000);
-      if (!title) {
-        setTitle(file.name.replace(/\.psd$/i, ''));
+      if (ext === 'psd') {
+        const placeholder = generateFilePlaceholder(file.name, 'psd', file.size);
+        resolve({
+          id,
+          file,
+          title: cleanName,
+          imageUrl: placeholder,
+          fileType: 'psd',
+          fileName: file.name,
+          width: 4000,
+          height: 3000,
+          sizeBytes: file.size,
+        });
+        return;
       }
-      setErrorMsg('');
-      return;
-    }
 
-    if (ext === 'ai') {
-      setFileType('ai');
-      const placeholder = generateFilePlaceholder(file.name, 'ai', file.size);
-      setImageUrl(placeholder);
-      setWidth(4000);
-      setHeight(3000);
-      if (!title) {
-        setTitle(file.name.replace(/\.ai$/i, ''));
+      if (ext === 'ai') {
+        const placeholder = generateFilePlaceholder(file.name, 'ai', file.size);
+        resolve({
+          id,
+          file,
+          title: cleanName,
+          imageUrl: placeholder,
+          fileType: 'ai',
+          fileName: file.name,
+          width: 4000,
+          height: 3000,
+          sizeBytes: file.size,
+        });
+        return;
       }
-      setErrorMsg('');
-      return;
-    }
 
-    if (!file.type.startsWith('image/')) {
-      setErrorMsg('请上传支持的图片或工程文件 (PNG, JPG, WebP, GIF, SVG, PSD, AI 等)');
-      return;
-    }
+      if (!file.type.startsWith('image/')) {
+        reject(new Error(`不支持的文件格式: ${file.name}`));
+        return;
+      }
 
-    setFileType('image');
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setImageUrl(result);
-
-      // Auto detect image dimensions
-      const img = new Image();
-      img.onload = () => {
-        setWidth(img.naturalWidth || 3000);
-        setHeight(img.naturalHeight || 2000);
-        if (!title && file.name) {
-          const cleanName = file.name.replace(/\.[^/.]+$/, '');
-          setTitle(cleanName);
-        }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        const img = new Image();
+        img.onload = () => {
+          resolve({
+            id,
+            file,
+            title: cleanName,
+            imageUrl: result,
+            fileType: 'image',
+            fileName: file.name,
+            width: img.naturalWidth || 3000,
+            height: img.naturalHeight || 2000,
+            sizeBytes: file.size,
+          });
+        };
+        img.onerror = () => {
+          resolve({
+            id,
+            file,
+            title: cleanName,
+            imageUrl: result,
+            fileType: 'image',
+            fileName: file.name,
+            width: 3000,
+            height: 2000,
+            sizeBytes: file.size,
+          });
+        };
+        img.src = result;
       };
-      img.src = result;
-    };
-    reader.readAsDataURL(file);
+      reader.onerror = () => reject(new Error(`读取失败: ${file.name}`));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFilesProcess = async (files: File[]) => {
+    if (!files || files.length === 0) return;
     setErrorMsg('');
+
+    if (files.length === 1 && batchFiles.length === 0) {
+      // Single file upload
+      try {
+        const item = await processSingleFile(files[0]);
+        setSizeBytes(item.sizeBytes);
+        setFileName(item.fileName);
+        setFileType(item.fileType);
+        setImageUrl(item.imageUrl);
+        setWidth(item.width);
+        setHeight(item.height);
+        if (!title) {
+          setTitle(item.title);
+        }
+      } catch (err: any) {
+        setErrorMsg(err.message || '文件解析失败');
+      }
+      return;
+    }
+
+    // Multiple files batch upload
+    try {
+      const results = await Promise.allSettled(files.map((f) => processSingleFile(f)));
+      const successfulItems: BatchFileItem[] = [];
+      const failedNames: string[] = [];
+
+      results.forEach((res, idx) => {
+        if (res.status === 'fulfilled') {
+          successfulItems.push(res.value);
+        } else {
+          failedNames.push(files[idx].name);
+        }
+      });
+
+      if (failedNames.length > 0) {
+        setErrorMsg(`已跳过不支持的文件: ${failedNames.join(', ')}`);
+      }
+
+      if (successfulItems.length > 0) {
+        setBatchFiles((prev) => {
+          const combined = [...prev, ...successfulItems];
+          if (!imageUrl && combined.length > 0) {
+            setImageUrl(combined[0].imageUrl);
+            setFileType(combined[0].fileType);
+            setFileName(combined[0].fileName);
+            setWidth(combined[0].width);
+            setHeight(combined[0].height);
+            setSizeBytes(combined[0].sizeBytes);
+            if (!title) setTitle(combined[0].title);
+          }
+          return combined;
+        });
+      }
+    } catch (err: any) {
+      setErrorMsg('批量处理文件时出错');
+    }
+  };
+
+  const handleRemoveBatchItem = (id: string) => {
+    setBatchFiles((prev) => {
+      const filtered = prev.filter((item) => item.id !== id);
+      if (filtered.length === 1) {
+        const single = filtered[0];
+        setTitle(single.title);
+        setImageUrl(single.imageUrl);
+        setFileType(single.fileType);
+        setFileName(single.fileName);
+        setWidth(single.width);
+        setHeight(single.height);
+        setSizeBytes(single.sizeBytes);
+      } else if (filtered.length === 0) {
+        setImageUrl('');
+        setFileName('');
+        setTitle('');
+      }
+      return filtered;
+    });
+  };
+
+  const handleUpdateBatchTitle = (id: string, newTitle: string) => {
+    setBatchFiles((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, title: newTitle } : item))
+    );
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -219,17 +354,36 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileProcess(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesProcess(Array.from(e.dataTransfer.files));
     }
   };
 
-  const handleAddTag = (tag: string) => {
-    const formatted = tag.startsWith('#') ? tag : `#${tag}`;
+  const handleToggleTag = (tag: string) => {
+    const clean = tag.replace(/^#/, '');
+    const formatted = `#${clean}`;
+    const currentTags = tagsInput.split(/\s+/).filter(Boolean);
+    if (currentTags.includes(formatted)) {
+      setTagsInput(currentTags.filter((t) => t !== formatted).join(' '));
+    } else {
+      setTagsInput([...currentTags, formatted].join(' '));
+    }
+  };
+
+  const handleAddCustomTag = () => {
+    const clean = customTagInput.trim().replace(/^#/, '');
+    if (!clean) return;
+    const formatted = `#${clean}`;
     const currentTags = tagsInput.split(/\s+/).filter(Boolean);
     if (!currentTags.includes(formatted)) {
       setTagsInput([...currentTags, formatted].join(' '));
     }
+    if (!userCustomTags.includes(clean) && !SUGGESTED_TAGS.includes(clean)) {
+      const updated = [clean, ...userCustomTags];
+      setUserCustomTags(updated);
+      localStorage.setItem('art_vault_custom_user_tags', JSON.stringify(updated));
+    }
+    setCustomTagInput('');
   };
 
   const handleCreateNewCategory = () => {
@@ -244,6 +398,49 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const parsedTags = tagsInput
+      .split(/[\s,，]+/)
+      .map((t) => t.trim().replace(/^#/, ''))
+      .filter(Boolean);
+
+    // Multi-file batch submission
+    if (batchFiles.length > 1) {
+      try {
+        setIsSubmitting(true);
+        for (let i = 0; i < batchFiles.length; i++) {
+          const item = batchFiles[i];
+          setBatchProgress(`正在保存第 ${i + 1}/${batchFiles.length} 张: 《${item.title}》...`);
+          await onSave({
+            title: item.title.trim() || `作品_${i + 1}`,
+            type,
+            tags: parsedTags,
+            date,
+            status,
+            description: description.trim(),
+            imageUrl: item.imageUrl,
+            fileType: item.fileType,
+            fileName: item.fileName,
+            previewScale,
+            width: item.width,
+            height: item.height,
+            sizeBytes: item.sizeBytes,
+            isFavorite,
+            isPinned,
+          });
+        }
+        onClose();
+      } catch (err) {
+        console.error(err);
+        setErrorMsg('批量保存部分作品失败，请重试');
+      } finally {
+        setIsSubmitting(false);
+        setBatchProgress('');
+      }
+      return;
+    }
+
+    // Single-file submission
     if (!title.trim()) {
       setErrorMsg('请在此填写作品名称');
       return;
@@ -252,11 +449,6 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       setErrorMsg('请上传作品图片或工程源文件 (PSD / AI)');
       return;
     }
-
-    const parsedTags = tagsInput
-      .split(/[\s,，]+/)
-      .map((t) => t.trim().replace(/^#/, ''))
-      .filter(Boolean);
 
     try {
       setIsSubmitting(true);
@@ -302,10 +494,14 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-neutral-100 dark:border-neutral-800">
           <div>
             <h2 className="font-art-serif text-base sm:text-lg font-bold text-neutral-900 dark:text-neutral-100">
-              {editArtwork ? '编辑作品信息' : '添加新作品'}
+              {batchFiles.length > 1 
+                ? `批量录入作品 (${batchFiles.length} 件)` 
+                : (editArtwork ? '编辑作品信息' : '添加新作品')}
             </h2>
             <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400">
-              保存至个人本地画匣 (IndexedDB)，支持高分图、PSD/AI工程与缩放调节
+              {batchFiles.length > 1
+                ? '支持多张图片/工程源文件同时上传，统一归类存档至个人画匣'
+                : '保存至个人本地画匣 (IndexedDB)，支持高分图、PSD/AI工程与多文件批量录入'}
             </p>
           </div>
           <button
@@ -324,79 +520,177 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
             </div>
           )}
 
-          {/* Upload Dropzone (Supports Images + PSD + AI) */}
+          {/* Upload Dropzone (Supports Single & Multiple Images + PSD + AI) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                作品文件 (支持高清图片、.psd、.ai 格式)
+                作品文件 (支持多选、拖入多个文件、.psd、.ai 格式)
               </label>
-              {fileType !== 'image' && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              {fileType !== 'image' && batchFiles.length <= 1 && (
+                <span 
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                    color: 'var(--accent-gold)',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                  }}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded uppercase border"
+                >
                   {fileType} 源文件
                 </span>
               )}
             </div>
 
-            <div
-              id="artwork-dropzone"
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all ${
-                isDragOver
-                  ? 'border-amber-500 bg-amber-500/5'
-                  : 'border-neutral-300 dark:border-neutral-700 hover:border-amber-500/70 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,.psd,.ai"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    handleFileProcess(e.target.files[0]);
-                  }
-                }}
-              />
-
-              {imageUrl ? (
-                <div className="relative w-full max-h-60 overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center group">
-                  <img
-                    src={imageUrl}
-                    alt="Preview"
-                    style={{ transform: `scale(${previewScale / 100})` }}
-                    className="max-h-60 w-auto object-contain rounded-lg transition-transform duration-200"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-medium">
-                    <Upload className="w-4 h-4" />
-                    <span>更换图片或源文件</span>
+            {batchFiles.length > 1 ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full text-white shadow-xs"
+                      style={{ backgroundColor: 'var(--accent-gold)' }}
+                    >
+                      <Files className="w-3.5 h-3.5" />
+                      <span>已选 {batchFiles.length} 个文件 (批量录入)</span>
+                    </span>
+                    <span className="text-[11px] text-neutral-400">
+                      可在此直接修改各画作专属标题
+                    </span>
                   </div>
-                  <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/70 text-[10px] text-white font-mono">
-                    {width} × {height} ({((sizeBytes / (1024 * 1024))).toFixed(1)} MB)
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 text-xs font-medium hover:underline cursor-pointer"
+                    style={{ color: 'var(--accent-gold)' }}
+                  >
+                    <Plus className="w-3.5 h-3.5" /> 继续追加文件
+                  </button>
                 </div>
-              ) : (
-                <div className="py-8 flex flex-col items-center text-center gap-2">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                    <Upload className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                    拖入作品 或 <span className="text-amber-600 dark:text-amber-400 underline">点击上传</span>
-                  </p>
-                  <p className="text-xs text-neutral-400">
-                    支持 PNG, JPG, WEBP, SVG 以及 Photoshop (.psd) 和 Illustrator (.ai) 档案
-                  </p>
-                </div>
-              )}
-            </div>
 
-            {/* Image Scaling Slider after upload */}
-            {imageUrl && (
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-1 rounded-2xl border border-neutral-200 dark:border-[#262B38] p-2.5 bg-neutral-50/70 dark:bg-[#12141A]/70">
+                  {batchFiles.map((item, idx) => (
+                    <div 
+                      key={item.id}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-[#181B22] border border-neutral-200 dark:border-[#262B38] shadow-xs"
+                    >
+                      {/* Thumbnail */}
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-neutral-100 dark:bg-neutral-900 border border-black/5 dark:border-white/5 flex items-center justify-center">
+                        <img 
+                          src={item.imageUrl} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover" 
+                        />
+                        {item.fileType !== 'image' && (
+                          <span 
+                            style={{ backgroundColor: 'var(--accent-gold)' }}
+                            className="absolute bottom-0 right-0 text-[8px] font-bold px-1 rounded-tl uppercase text-white"
+                          >
+                            {item.fileType}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title input */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-mono text-neutral-400">作品 #{idx + 1}</span>
+                          <span className="text-[10px] font-mono text-neutral-400">
+                            {item.width}×{item.height} · {(item.sizeBytes / (1024 * 1024)).toFixed(1)} MB
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          value={item.title}
+                          onChange={(e) => handleUpdateBatchTitle(item.id, e.target.value)}
+                          placeholder="在此填写此张作品名称"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBatchItem(item.id)}
+                        title="从本次批量中移除"
+                        className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  💡 提示：下方的分类、状态、日期、标签与故事将批量应用至这 {batchFiles.length} 张作品，保存后将自动分别独立建档。
+                </p>
+              </div>
+            ) : (
+              <div
+                id="artwork-dropzone"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all ${
+                  isDragOver
+                    ? 'border-amber-500 bg-amber-500/5'
+                    : 'border-neutral-300 dark:border-neutral-700 hover:border-amber-500/70 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                }`}
+              >
+                {imageUrl ? (
+                  <div className="relative w-full max-h-60 overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center group">
+                    <img
+                      src={imageUrl}
+                      alt="Preview"
+                      style={{ transform: `scale(${previewScale / 100})` }}
+                      className="max-h-60 w-auto object-contain rounded-lg transition-transform duration-200"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-medium">
+                      <Upload className="w-4 h-4" />
+                      <span>更换图片或源文件 (可多选)</span>
+                    </div>
+                    <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/70 text-[10px] text-white font-mono">
+                      {width} × {height} ({((sizeBytes / (1024 * 1024))).toFixed(1)} MB)
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 flex flex-col items-center text-center gap-2">
+                    <div 
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center transition-colors"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                        color: 'var(--accent-gold)',
+                      }}
+                    >
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                      拖入作品 (支持多文件) 或 <span style={{ color: 'var(--accent-gold)' }} className="underline">点击上传</span>
+                    </p>
+                    <p className="text-xs text-neutral-400">
+                      支持 PNG, JPG, WEBP, SVG 以及 Photoshop (.psd) 和 Illustrator (.ai) 档案，可一次选择多个文件批量上传
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Hidden multi-file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.psd,.ai"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  handleFilesProcess(Array.from(e.target.files));
+                }
+              }}
+            />
+
+            {/* Image Scaling Slider after single upload */}
+            {imageUrl && batchFiles.length <= 1 && (
               <div className="mt-3 p-3 rounded-xl bg-neutral-50 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
-                  <ZoomIn className="w-4 h-4 text-amber-500" />
+                  <ZoomIn className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
                   <span>作品显示缩放: <strong className="font-mono">{previewScale}%</strong></span>
                 </div>
                 <div className="flex items-center gap-3 flex-1 max-w-xs">
@@ -407,7 +701,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                     step="5"
                     value={previewScale}
                     onChange={(e) => setPreviewScale(Number(e.target.value))}
-                    className="w-full accent-amber-500 cursor-pointer"
+                    style={{ accentColor: 'var(--accent-gold)' }}
+                    className="w-full cursor-pointer"
                   />
                   <button
                     type="button"
@@ -422,22 +717,29 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
             )}
           </div>
 
-          {/* Title (Requirement 5: "作品名称", placeholder "在此填写作品名称") & Pin Option */}
+          {/* Title & Pin Option (Title shown for single file, individual titles shown in batch list) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
-                作品名称
-              </label>
-              <input
-                id="modal-artwork-title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="在此填写作品名称"
-                className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
-                required
-              />
-            </div>
+            {batchFiles.length <= 1 ? (
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
+                  作品名称
+                </label>
+                <input
+                  id="modal-artwork-title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="在此填写作品名称"
+                  className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                  required
+                />
+              </div>
+            ) : (
+              <div className="sm:col-span-2 p-3 rounded-xl bg-neutral-50 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-2">
+                <Files className="w-4 h-4 text-neutral-400 shrink-0" />
+                <span>批量录入模式中，每件作品的标题已在上方清单中分别命名。</span>
+              </div>
+            )}
 
             {/* Pin to Top Feature (置顶) */}
             <div>
@@ -447,9 +749,14 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsPinned(!isPinned)}
+                style={{
+                  backgroundColor: isPinned ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : undefined,
+                  borderColor: isPinned ? 'var(--accent-gold)' : undefined,
+                  color: isPinned ? 'var(--accent-gold)' : undefined,
+                }}
                 className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-xl border transition-all ${
                   isPinned
-                    ? 'bg-amber-500/10 border-amber-500 text-amber-700 dark:text-amber-400 font-semibold'
+                    ? 'font-semibold'
                     : 'bg-neutral-100 dark:bg-[#12141A] border-neutral-200 dark:border-[#262B38] text-neutral-600 dark:text-neutral-400'
                 }`}
               >
@@ -469,7 +776,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddingNewCat(!isAddingNewCat)}
-                  className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5"
+                  style={{ color: 'var(--accent-gold)' }}
+                  className="text-[11px] font-medium hover:underline flex items-center gap-0.5 cursor-pointer"
                 >
                   <Plus className="w-3 h-3" /> 新建分类
                 </button>
@@ -482,12 +790,14 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                     value={newCatName}
                     onChange={(e) => setNewCatName(e.target.value)}
                     placeholder="输入新分类名称..."
-                    className="w-full px-3 py-1.5 text-xs rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-amber-500"
+                    style={{ borderColor: 'var(--accent-gold)' }}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl bg-neutral-100 dark:bg-[#12141A] border focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={handleCreateNewCategory}
-                    className="px-2.5 py-1.5 rounded-xl bg-amber-500 text-white text-xs shrink-0"
+                    style={{ backgroundColor: 'var(--accent-gold)' }}
+                    className="px-3 py-1.5 rounded-xl text-white text-xs font-semibold shrink-0 hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
                   >
                     添加
                   </button>
@@ -497,7 +807,10 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                   id="modal-artwork-type"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                  className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                  style={{
+                    borderColor: 'var(--card-border)',
+                  }}
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.name}>
@@ -516,7 +829,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                 id="modal-artwork-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
               >
                 {statuses.map((s) => (
                   <option key={s.id} value={s.name}>
@@ -531,30 +844,68 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                标签 (空格分隔)
+                标签便签 (空格或回车分隔)
               </label>
-              <span className="text-[11px] text-neutral-400">推荐标签点击快速添加</span>
+              <span className="text-[11px] text-neutral-400">点击标签即可自由选中或取消</span>
             </div>
             <input
               id="modal-artwork-tags"
               type="text"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="#人物 #原创 #夜景 #厚涂"
-              className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono"
+              placeholder="请输入或选择便签，如: #人物 #场景 #二次元"
+              className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
             />
-            {/* Tag Quick suggestions */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {SUGGESTED_TAGS.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => handleAddTag(tag)}
-                  className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 hover:bg-amber-100 dark:bg-neutral-800 dark:hover:bg-amber-900/40 text-neutral-600 dark:text-neutral-300 transition-colors"
-                >
-                  +{tag}
-                </button>
-              ))}
+
+            {/* Custom Tag Name input & Add Button (Requirement 1) */}
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="text"
+                value={customTagInput}
+                onChange={(e) => setCustomTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomTag();
+                  }
+                }}
+                placeholder="输入自定义便签/标签名，回车或点击添加..."
+                className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomTag}
+                style={{ backgroundColor: 'var(--accent-gold)' }}
+                className="px-3 py-1.5 rounded-xl text-white text-xs font-semibold shrink-0 hover:opacity-90 transition-opacity flex items-center gap-1 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3 h-3" /> 添加便签
+              </button>
+            </div>
+
+            {/* Combined Tag Suggestions & Custom Tags as Interactive Chips */}
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {Array.from(new Set([...userCustomTags, ...SUGGESTED_TAGS])).map((tag) => {
+                const isSelected = tagsInput.split(/\s+/).some((t) => t.replace(/^#/, '') === tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleToggleTag(tag)}
+                    style={{
+                      backgroundColor: isSelected ? 'var(--accent-gold)' : undefined,
+                      borderColor: isSelected ? 'var(--accent-gold)' : undefined,
+                      color: isSelected ? '#FFFFFF' : undefined,
+                    }}
+                    className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'shadow-2xs font-semibold'
+                        : 'bg-neutral-100 hover:opacity-80 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300'
+                    }`}
+                  >
+                    {isSelected ? `✓ #${tag}` : `+#${tag}`}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -569,7 +920,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 font-mono"
+                className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
               />
             </div>
 
@@ -579,7 +930,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                   type="checkbox"
                   checked={isFavorite}
                   onChange={(e) => setIsFavorite(e.target.checked)}
-                  className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
+                  style={{ accentColor: 'var(--accent-gold)' }}
+                  className="w-4 h-4 rounded"
                 />
                 <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                   加入心仪收藏
@@ -599,7 +951,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="记录这幅画的创作构思、心路历程、笔刷参数或灵感来源..."
-              className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+              className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
             />
           </div>
 
@@ -616,9 +968,16 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               id="modal-save-btn"
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 rounded-xl text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow active:scale-95 disabled:opacity-50 transition-all"
+              className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow active:scale-95 disabled:opacity-50 transition-all"
+              style={{
+                backgroundColor: 'var(--accent-gold)',
+              }}
             >
-              {isSubmitting ? '保存中...' : '保存作品'}
+              {isSubmitting
+                ? (batchProgress || '保存中...')
+                : batchFiles.length > 1
+                  ? `批量存入画匣 (共 ${batchFiles.length} 件作品)`
+                  : (editArtwork ? '更新作品' : '保存作品')}
             </button>
           </div>
         </form>

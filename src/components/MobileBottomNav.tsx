@@ -88,23 +88,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <span className="text-[10px] mt-0.5 tracking-tight font-medium">作品库</span>
         </button>
 
-        {/* 3. 中心快速添加按钮 */}
-        <div className="flex-1 flex justify-center items-center py-1">
-          <button
-            type="button"
-            id="mobile-dock-add-btn"
-            onClick={onOpenAddModal}
-            title="收纳新作品"
-            className="w-11 h-11 rounded-full flex items-center justify-center text-white shadow-md active:scale-90 transition-transform -translate-y-1.5 ring-4 ring-white dark:ring-[#141822]"
-            style={{
-              backgroundColor: 'var(--accent-gold, #C28E5A)',
-            }}
-          >
-            <Plus className="w-6 h-6 stroke-[2.5]" />
-          </button>
-        </div>
-
-        {/* 4. 创作日记 */}
+        {/* 3. 创作日记 */}
         <button
           type="button"
           onClick={() => onSelectTab('diary')}
@@ -130,7 +114,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               />
             )}
           </div>
-          <span className="text-[10px] mt-0.5 tracking-tight font-medium">日记</span>
+          <span className="text-[10px] mt-0.5 tracking-tight font-medium">手记</span>
         </button>
 
         {/* 5. 统计 */}

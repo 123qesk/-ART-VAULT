@@ -249,7 +249,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen flex flex-col selection:bg-amber-500/20 selection:text-amber-900 dark:selection:bg-amber-400/20 dark:selection:text-amber-200">
+      <div className="min-h-screen flex flex-col">
         
         {/* Navigation Bar */}
         <Navbar
@@ -381,7 +381,7 @@ export default function App() {
         {/* Toast Notification Pill */}
         {toastMessage && (
           <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-medium shadow-xl border border-white/10 dark:border-black/10 animate-in fade-in slide-in-from-bottom-3 duration-200">
-            <Check className="w-3.5 h-3.5 text-amber-400 dark:text-amber-600" />
+            <Check className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
             <span>{toastMessage}</span>
           </div>
         )}
