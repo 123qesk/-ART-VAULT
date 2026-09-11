@@ -674,7 +674,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   borderColor: 'var(--card-border)',
                 }}
               >
-                <div className="relative aspect-4/5 overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+                <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100 dark:bg-neutral-900">
                   <img
                     src={art.imageUrl}
                     alt={art.title}

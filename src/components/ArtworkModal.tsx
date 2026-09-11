@@ -38,7 +38,7 @@ interface ArtworkModalProps {
   onAddCategory?: (name: string) => void;
 }
 
-const SUGGESTED_TAGS = ['原创', '人物', '夜景', '场景', '厚涂', '二次元', '光影练习', '写生', '赛博朋克', '自然'];
+const DEFAULT_BUILTIN_TAGS = ['原创', '人物', '夜景', '场景', '厚涂', '二次元', '光影练习', '写生', '赛博朋克', '自然'];
 
 // Helper to create elegant SVG representation for PSD / AI files
 function generateFilePlaceholder(fileName: string, type: 'psd' | 'ai', sizeBytes: number): string {
@@ -123,11 +123,21 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const [isAddingNewCat, setIsAddingNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState('');
 
-  // Custom Tag input state (Requirement 1)
+  // Tag management state (supports deleting both built-in and custom tags)
   const [customTagInput, setCustomTagInput] = useState('');
-  const [userCustomTags, setUserCustomTags] = useState<string[]>(() => {
-    const saved = localStorage.getItem('art_vault_custom_user_tags');
-    return saved ? JSON.parse(saved) : [];
+  const [isTagDeleteMode, setIsTagDeleteMode] = useState(false);
+  const [availableTags, setAvailableTags] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('art_vault_all_available_tags');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+      const oldCustom = localStorage.getItem('art_vault_custom_user_tags');
+      const customList = oldCustom ? JSON.parse(oldCustom) : [];
+      return Array.from(new Set([...customList, ...DEFAULT_BUILTIN_TAGS]));
+    } catch {
+      return DEFAULT_BUILTIN_TAGS;
+    }
   });
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -378,12 +388,32 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
     if (!currentTags.includes(formatted)) {
       setTagsInput([...currentTags, formatted].join(' '));
     }
-    if (!userCustomTags.includes(clean) && !SUGGESTED_TAGS.includes(clean)) {
-      const updated = [clean, ...userCustomTags];
-      setUserCustomTags(updated);
-      localStorage.setItem('art_vault_custom_user_tags', JSON.stringify(updated));
+    if (!availableTags.includes(clean)) {
+      const updated = [clean, ...availableTags];
+      setAvailableTags(updated);
+      localStorage.setItem('art_vault_all_available_tags', JSON.stringify(updated));
     }
     setCustomTagInput('');
+  };
+
+  const handleDeleteTag = (tagToDelete: string) => {
+    const clean = tagToDelete.replace(/^#/, '');
+    const updated = availableTags.filter((t) => t !== clean);
+    setAvailableTags(updated);
+    localStorage.setItem('art_vault_all_available_tags', JSON.stringify(updated));
+
+    // Remove from current tagsInput if present
+    const formatted = `#${clean}`;
+    const currentTags = tagsInput.split(/\s+/).filter(Boolean);
+    if (currentTags.includes(formatted) || currentTags.includes(clean)) {
+      setTagsInput(currentTags.filter((t) => t !== formatted && t !== clean).join(' '));
+    }
+  };
+
+  const handleRestoreDefaultTags = () => {
+    const merged = Array.from(new Set([...DEFAULT_BUILTIN_TAGS, ...availableTags]));
+    setAvailableTags(merged);
+    localStorage.setItem('art_vault_all_available_tags', JSON.stringify(merged));
   };
 
   const handleCreateNewCategory = () => {
@@ -857,7 +887,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
             />
 
-            {/* Custom Tag Name input & Add Button (Requirement 1) */}
+            {/* Custom Tag Name input, Add Button & Delete Tag Button */}
             <div className="flex items-center gap-2 mt-2">
               <input
                 type="text"
@@ -880,32 +910,98 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               >
                 <Plus className="w-3 h-3" /> 添加便签
               </button>
+              <button
+                type="button"
+                onClick={() => setIsTagDeleteMode((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-1 shadow-xs cursor-pointer border ${
+                  isTagDeleteMode
+                    ? 'bg-rose-50 border-rose-400 text-rose-600 dark:bg-rose-950/50 dark:border-rose-700 dark:text-rose-300 font-bold'
+                    : 'bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:text-rose-500'
+                }`}
+                title={isTagDeleteMode ? '完成删除' : '删除标签 (内置与自定义标签均可删除)'}
+              >
+                <Trash2 className="w-3 h-3 text-rose-500" />
+                <span>{isTagDeleteMode ? '完成删除' : '删除标签'}</span>
+              </button>
             </div>
 
-            {/* Combined Tag Suggestions & Custom Tags as Interactive Chips */}
-            <div className="flex flex-wrap gap-1.5 mt-2.5">
-              {Array.from(new Set([...userCustomTags, ...SUGGESTED_TAGS])).map((tag) => {
+            {/* Combined Tag Suggestions & Custom Tags as Interactive Chips with Delete Button */}
+            <div className="flex flex-wrap gap-1.5 mt-2.5 items-center">
+              {availableTags.map((tag) => {
                 const isSelected = tagsInput.split(/\s+/).some((t) => t.replace(/^#/, '') === tag);
                 return (
-                  <button
+                  <div
                     key={tag}
-                    type="button"
-                    onClick={() => handleToggleTag(tag)}
+                    className="inline-flex items-center rounded-full overflow-hidden border text-[11px] transition-all group"
                     style={{
                       backgroundColor: isSelected ? 'var(--accent-gold)' : undefined,
                       borderColor: isSelected ? 'var(--accent-gold)' : undefined,
                       color: isSelected ? '#FFFFFF' : undefined,
                     }}
-                    className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'shadow-2xs font-semibold'
-                        : 'bg-neutral-100 hover:opacity-80 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300'
-                    }`}
                   >
-                    {isSelected ? `✓ #${tag}` : `+#${tag}`}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isTagDeleteMode) {
+                          handleDeleteTag(tag);
+                        } else {
+                          handleToggleTag(tag);
+                        }
+                      }}
+                      className={`px-2.5 py-0.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'shadow-2xs font-semibold'
+                          : 'bg-neutral-100 hover:opacity-90 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'
+                      }`}
+                    >
+                      {isSelected ? `✓ #${tag}` : `+#${tag}`}
+                    </button>
+
+                    {/* Delete Tag Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTag(tag);
+                      }}
+                      title={`删除标签 #${tag} (内置与自定义均可点击删除)`}
+                      aria-label={`删除标签 #${tag}`}
+                      className={`px-1.5 py-0.5 flex items-center justify-center transition-all cursor-pointer border-l ${
+                        isTagDeleteMode
+                          ? 'bg-rose-500 text-white hover:bg-rose-600 border-rose-400 font-bold'
+                          : isSelected
+                          ? 'hover:bg-black/20 text-white/80 hover:text-white border-white/20'
+                          : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-neutral-400 hover:text-rose-500 border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
                 );
               })}
+
+              {availableTags.length === 0 && (
+                <div className="flex items-center gap-2 py-1 text-xs text-neutral-400">
+                  <span>暂无可选用便签</span>
+                  <button
+                    type="button"
+                    onClick={handleRestoreDefaultTags}
+                    className="text-amber-600 dark:text-amber-400 hover:underline"
+                  >
+                    恢复默认内置标签
+                  </button>
+                </div>
+              )}
+
+              {availableTags.length > 0 && availableTags.length < DEFAULT_BUILTIN_TAGS.length && (
+                <button
+                  type="button"
+                  onClick={handleRestoreDefaultTags}
+                  className="text-[11px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 ml-1 underline cursor-pointer"
+                >
+                  恢复默认标签
+                </button>
+              )}
             </div>
           </div>
 

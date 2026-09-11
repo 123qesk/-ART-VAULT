@@ -73,17 +73,18 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        borderColor: (isHovered || artwork.isPinned) ? 'var(--accent-gold)' : undefined,
+        backgroundColor: 'var(--card-bg)',
+        borderColor: (isHovered || artwork.isPinned) ? 'var(--accent-gold)' : 'var(--card-border)',
         boxShadow: isHovered
           ? '0 12px 28px -4px color-mix(in srgb, var(--accent-gold) 25%, transparent), 0 0 0 1.5px var(--accent-gold)'
           : artwork.isPinned
           ? '0 0 0 1.5px var(--accent-gold)'
           : undefined,
       }}
-      className="masonry-item group relative flex flex-col h-full rounded-2xl overflow-hidden bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] transition-all duration-300 cursor-pointer transform hover:-translate-y-1 shadow-xs"
+      className="masonry-item group relative flex flex-col h-full rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer transform hover:-translate-y-1 shadow-xs"
     >
-      {/* Artwork Image Container with standardized aspect ratio for uniform module size */}
-      <div className="relative w-full aspect-[4/3] overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
+      {/* Artwork Image Container with shorter, refined aspect ratio */}
+      <div className="relative w-full aspect-[16/9] overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
         <div className="w-full h-full overflow-hidden flex items-center justify-center">
           <img
             src={artwork.imageUrl}
@@ -180,14 +181,14 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
       </div>
 
       {/* Info Body with standardized heights */}
-      <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1 gap-2">
+      <div className="p-3 flex flex-col justify-between flex-1 gap-1.5">
         <div>
           <div className="flex items-start justify-between gap-2">
             <h3 
               style={{
                 color: isHovered ? 'var(--accent-gold)' : undefined,
               }}
-              className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1 transition-colors"
+              className="font-art-serif text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1 transition-colors"
             >
               {artwork.title}
             </h3>
@@ -196,12 +197,27 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
             </div>
           </div>
 
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed font-light mt-1.5 h-8">
-            {artwork.description || <span className="opacity-0 select-none">暂无描述</span>}
+          <p 
+            title={artwork.description || undefined}
+            className="text-xs text-neutral-500 dark:text-neutral-400 font-light mt-1 overflow-hidden"
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
+              textOverflow: 'ellipsis',
+              lineHeight: '1.25rem',
+              height: '2.5rem',
+              minHeight: '2.5rem',
+              maxHeight: '2.5rem',
+            }}
+          >
+            {artwork.description || <span className="opacity-30 italic select-none">暂无创作故事 / 技法笔记 / 备注</span>}
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 pt-1">
+        <div className="flex flex-col gap-1.5 pt-0.5">
           {/* Tags */}
           <div className="flex items-center flex-wrap gap-1 h-5 overflow-hidden">
             {artwork.tags && artwork.tags.length > 0 ? (
@@ -224,7 +240,7 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
           </div>
 
           {/* Footer Meta */}
-          <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/80 text-[11px] text-neutral-400 dark:text-neutral-500 font-mono">
+          <div className="flex items-center justify-between pt-1.5 border-t border-neutral-100 dark:border-neutral-800/80 text-[11px] text-neutral-400 dark:text-neutral-500 font-mono">
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" style={{ color: isHovered ? 'var(--accent-gold)' : undefined }} />
               {artwork.date}

@@ -63,17 +63,18 @@ const GalleryListRow: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        borderColor: (isHovered || art.isPinned) ? 'var(--accent-gold)' : undefined,
+        backgroundColor: 'var(--card-bg)',
+        borderColor: (isHovered || art.isPinned) ? 'var(--accent-gold)' : 'var(--card-border)',
         boxShadow: isHovered
           ? '0 10px 26px -4px color-mix(in srgb, var(--accent-gold) 22%, transparent), 0 0 0 1.5px var(--accent-gold)'
           : art.isPinned
           ? '0 0 0 1.5px var(--accent-gold)'
           : undefined,
       }}
-      className="group relative flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-white dark:bg-[#181B22] border transition-all duration-200 cursor-pointer border-[#E8E4DC] dark:border-[#262B38]"
+      className="group relative flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
     >
       {/* Left Thumbnail */}
-      <div className="relative w-full sm:w-44 h-36 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
+      <div className="relative w-full sm:w-40 h-28 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
         {art.mediaType === 'video' || art.fileType === 'video' ? (
           <video
             src={art.imageUrl}
@@ -178,9 +179,26 @@ const GalleryListRow: React.FC<{
             </div>
           </div>
 
-          {art.description && (
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 mt-1.5 leading-relaxed font-light">
+          {art.description ? (
+            <p 
+              title={art.description}
+              className="text-xs text-neutral-500 dark:text-neutral-400 font-light mt-1.5 overflow-hidden"
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflowWrap: 'anywhere',
+                wordBreak: 'break-word',
+                textOverflow: 'ellipsis',
+                lineHeight: '1.25rem',
+                maxHeight: '2.5rem',
+              }}
+            >
               {art.description}
+            </p>
+          ) : (
+            <p className="text-xs text-neutral-400/40 dark:text-neutral-500/40 font-light mt-1.5 italic select-none">
+              暂无创作故事 / 技法笔记 / 备注
             </p>
           )}
 
@@ -481,7 +499,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           className="hidden md:block w-60 shrink-0 sticky top-24 space-y-6"
         >
           {/* Main Categories Section */}
-          <div className="bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] rounded-2xl p-3 shadow-xs">
+          <div 
+            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+            className="border rounded-2xl p-3 shadow-xs"
+          >
             <div className="flex items-center justify-between px-3 py-1.5">
               <span className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
                 作品分类
@@ -490,9 +511,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 type="button"
                 onClick={() => setIsManagerOpen(true)}
                 title="管理自定义分类与状态 (可拖拽排序/删除)"
-                className="text-neutral-400 hover:text-amber-600 dark:hover:text-amber-400 p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
-                <Settings2 className="w-3.5 h-3.5" />
+                <Settings2 className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
               </button>
             </div>
             
@@ -563,7 +584,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               >
                 <span className="flex items-center gap-2">
                   <Trash2 className="w-4 h-4 text-rose-500" />
-                  <span>画师回收站</span>
+                  <span>回收站</span>
                 </span>
                 <span className="text-xs font-mono opacity-80">{categoryCounts.trash}</span>
               </button>
@@ -572,7 +593,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
           {/* Tag Cloud */}
           {allTags.length > 0 && (
-            <div className="bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] rounded-2xl p-4 shadow-xs">
+            <div 
+              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+              className="border rounded-2xl p-4 shadow-xs"
+            >
               <div className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-3">
                 热门标签
               </div>
@@ -606,7 +630,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         <main className="flex-1 w-full min-w-0 space-y-6">
           
           {/* Top Filter & Toolbar with Updated Title and 3 Layout Options */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs flex flex-wrap items-center justify-between gap-4">
+          <div 
+            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+            className="p-4 rounded-2xl border shadow-xs flex flex-wrap items-center justify-between gap-4"
+          >
             
             {/* Left Status, Date & Sort Filters */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -856,7 +883,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             </div>
           ) : (
             /* Empty State */
-            <div className="p-12 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] text-center space-y-4 shadow-xs">
+            <div 
+              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+              className="p-12 rounded-3xl border text-center space-y-4 shadow-xs"
+            >
               <div 
                 className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center transition-colors"
                 style={{
@@ -921,7 +951,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             {/* Drawer Header */}
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-amber-500" />
+                <Filter className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
                 <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100">
                   筛选与标签
                 </h3>
@@ -944,8 +974,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               }}
               className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 text-xs font-medium text-neutral-800 dark:text-neutral-200 transition-colors"
             >
-              <Settings2 className="w-4 h-4 text-amber-500" />
-              <span>管理作品分类与状态 (可拖拽排序/添加)</span>
+              <Settings2 className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+              <span>管理作品分类与状态 </span>
             </button>
 
             {/* Tag Cloud in Mobile Drawer */}
@@ -1005,7 +1035,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsMobileFilterDrawerOpen(false)}
-                className="px-5 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold shadow-xs active:scale-95"
+                style={{ backgroundColor: 'var(--accent-gold)' }}
+                className="px-5 py-2 rounded-xl text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
               >
                 完成
               </button>
