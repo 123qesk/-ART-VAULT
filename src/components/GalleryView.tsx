@@ -1586,49 +1586,50 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
                       return (
                         <div key={group.title} className={`relative pl-8 sm:pl-11 space-y-4 ${isLast ? 'pb-2' : 'pb-8'}`}>
-                          {/* Guide Line Segment Above Circle (Connects from previous group and stops precisely at circle top edge at 5px) */}
+                          {/* Guide Line Segment Above Circle (Connects seamlessly from previous group, stopping flush at outer circle top rim at 5px) */}
                           {!isFirst && (
                             <div 
                               className="absolute left-4 sm:left-5 top-0 h-[5px] w-[2px] -translate-x-1/2 pointer-events-none"
                               style={{
-                                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 75%, transparent)',
+                                backgroundColor: 'var(--accent-gold)',
                               }}
                             />
                           )}
 
-                          {/* Guide Line Segment Below Circle (Starts cleanly at circle bottom edge at 23px, runs down to next group or fades out) */}
+                          {/* Guide Line Segment Below Circle (Single continuous 2px bar starting flush from outer circle bottom rim at 23px, zero neck / zero step) */}
                           <div 
                             className="absolute left-4 sm:left-5 top-[23px] w-[2px] -translate-x-1/2 pointer-events-none"
                             style={{
                               bottom: isLast ? '1rem' : '0px',
                               background: isLast
-                                ? 'linear-gradient(to bottom, color-mix(in srgb, var(--accent-gold) 75%, transparent), color-mix(in srgb, var(--accent-gold) 15%, transparent))'
-                                : 'color-mix(in srgb, var(--accent-gold) 75%, transparent)',
+                                ? 'linear-gradient(to bottom, var(--accent-gold), transparent)'
+                                : 'var(--accent-gold)',
                             }}
                           />
 
-                          {/* Month Header Circle Node - Pure hollow ring (空心圆) with centered solid dot, dynamically styled with theme color */}
+                          {/* Month Header Circle Node: Pure Hollow Ring with Concentric Center Dot */}
                           <div 
-                            className="absolute left-4 sm:left-5 -translate-x-1/2 top-0 h-7 flex items-center justify-center z-10 pointer-events-none"
+                            className="absolute left-4 sm:left-5 -translate-x-1/2 top-0 h-7 w-7 z-10 pointer-events-none flex items-center justify-center"
                           >
                             <svg 
-                              viewBox="0 0 20 20" 
-                              className="w-[18px] h-[18px] shrink-0 select-none drop-shadow-xs"
+                              viewBox="0 0 18 18" 
+                              className="w-[18px] h-[18px] shrink-0 select-none"
                               aria-hidden="true"
                             >
-                              {/* Hollow Outer Ring: Transparent/empty inside (fill="none"), theme colored stroke */}
+                              {/* Hollow Outer Circle Ring (Outer diameter exactly 18px, fits viewBox perfectly: outer perimeter [0, 18], inner perimeter [2, 16]) */}
                               <circle 
-                                cx="10" 
-                                cy="10" 
+                                cx="9" 
+                                cy="9" 
                                 r="8" 
                                 fill="none" 
                                 stroke="var(--accent-gold)" 
                                 strokeWidth="2" 
                               />
-                              {/* Center Solid Circle/Dot: Perfectly concentric at cx=10, cy=10, theme colored fill */}
+
+                              {/* Concentric Solid Center Dot: Completely hollow around it, dynamic theme color */}
                               <circle 
-                                cx="10" 
-                                cy="10" 
+                                cx="9" 
+                                cy="9" 
                                 r="2.8" 
                                 fill="var(--accent-gold)" 
                               />
