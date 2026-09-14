@@ -204,7 +204,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                         style={{ backgroundColor: 'var(--accent-gold)' }}
                       />
 
-                      <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs hover:shadow-md transition-all space-y-3">
+                      <div style={{ backgroundColor: "var(--content-bg)", borderColor: "var(--card-border)" }} className="p-5 sm:p-6 rounded-2xl border shadow-xs hover:shadow-md transition-all space-y-3">
                         {/* Header: Date + Title + Associated Art Badge */}
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
@@ -299,7 +299,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
         </div>
       ) : (
         /* Empty State */
-        <div className="py-20 rounded-3xl bg-white dark:bg-[#181B22] border border-dashed border-[#E8E4DC] dark:border-[#262B38] text-center p-8 space-y-4">
+        <div style={{ backgroundColor: "var(--content-bg)", borderColor: "var(--card-border)" }} className="py-20 rounded-3xl border border-dashed text-center p-8 space-y-4">
           <div 
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto transition-colors"
             style={{
@@ -331,7 +331,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
       {/* Diary Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95">
+          <div style={{ backgroundColor: "var(--modal-bg)", borderColor: "var(--card-border)" }} className="relative w-full max-w-lg rounded-3xl border shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
               <h2 className="font-art-serif text-lg font-bold text-neutral-900 dark:text-neutral-100">
                 {editingDiary ? '编辑创作日记' : '新建创作日记'}

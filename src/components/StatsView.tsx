@@ -221,7 +221,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
       {/* Date Scope Controls (Requirement 4: 支持选择日期，不同的年月日) */}
       <section 
         id="stats-date-selector"
-        className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs space-y-4"
+        style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-4 sm:p-5 rounded-3xl border shadow-xs space-y-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-300">
@@ -387,7 +387,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
 
       {/* 4 Big Metric Cards */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs">
+        <div style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-5 sm:p-6 rounded-2xl border shadow-xs">
           <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500 block mb-2">
             所选区间作品
           </span>
@@ -403,7 +403,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
           </div>
         </div>
 
-        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs">
+        <div style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-5 sm:p-6 rounded-2xl border shadow-xs">
           <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500 block mb-2">
             活跃创作天数
           </span>
@@ -419,7 +419,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
           </div>
         </div>
 
-        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs">
+        <div style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-5 sm:p-6 rounded-2xl border shadow-xs">
           <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500 block mb-2">
             心仪收藏
           </span>
@@ -435,7 +435,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
           </div>
         </div>
 
-        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs">
+        <div style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-5 sm:p-6 rounded-2xl border shadow-xs">
           <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500 block mb-2">
             创作日志
           </span>
@@ -453,7 +453,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
       </section>
 
       {/* Monthly Output Bar Chart */}
-      <section className="p-6 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs space-y-6">
+      <section style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-6 rounded-3xl border shadow-xs space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-art-serif text-lg font-bold text-neutral-900 dark:text-neutral-100">
@@ -515,7 +515,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Most painted types */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs space-y-4">
+        <div style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-6 rounded-3xl border shadow-xs space-y-4">
           <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <Layers className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
             <span>创作类型偏好 ({typeStats.length})</span>
@@ -544,7 +544,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
         </div>
 
         {/* Most frequent tags */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs space-y-4">
+        <div style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-6 rounded-3xl border shadow-xs space-y-4">
           <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
             <span>最常用创作标签</span>
@@ -575,7 +575,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
       </div>
 
       {/* Creation Status Breakdown */}
-      <section className="p-6 rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-xs">
+      <section style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-6 rounded-3xl border shadow-xs">
         <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 mb-4">
           创作状态分布
         </h3>

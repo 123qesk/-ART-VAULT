@@ -9,6 +9,7 @@ import { StatsView } from './components/StatsView';
 import { SettingsView } from './components/SettingsView';
 import { ArtworkModal } from './components/ArtworkModal';
 import { ArtworkDetailModal } from './components/ArtworkDetailModal';
+import { WallpaperBackground } from './components/WallpaperBackground';
 import { vaultDB } from './services/db';
 import { Artwork, DiaryEntry, ViewTab, CategoryItem, StatusItem } from './types';
 import { Check } from 'lucide-react';
@@ -249,7 +250,8 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col relative">
+        <WallpaperBackground />
         
         {/* Navigation Bar */}
         <Navbar

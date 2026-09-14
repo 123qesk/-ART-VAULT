@@ -1,4 +1,4 @@
-import { Artwork, DiaryEntry, CategoryItem, StatusItem } from '../types';
+import { Artwork, DiaryEntry, CategoryItem, StatusItem, WallpaperConfig } from '../types';
 import { INITIAL_ARTWORKS, INITIAL_DIARIES, DEFAULT_CATEGORIES, DEFAULT_STATUSES } from './defaultData';
 
 const DB_NAME = 'ArtVaultDB';
@@ -331,6 +331,59 @@ class ArtVaultDatabase {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
+  }
+
+  // Custom Wallpaper (Stored in IndexedDB for large images and video files)
+  async getWallpaper(): Promise<WallpaperConfig | null> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('settings', 'readonly');
+        const store = tx.objectStore('settings');
+        const req = store.get('app_wallpaper');
+        req.onsuccess = () => {
+          if (req.result && req.result.value) {
+            resolve(req.result.value);
+          } else {
+            resolve(null);
+          }
+        };
+        req.onerror = () => resolve(null);
+      });
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
+
+  async saveWallpaper(wallpaper: WallpaperConfig): Promise<void> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('settings', 'readwrite');
+        const store = tx.objectStore('settings');
+        const req = store.put({ key: 'app_wallpaper', value: wallpaper });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async deleteWallpaper(): Promise<void> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('settings', 'readwrite');
+        const store = tx.objectStore('settings');
+        const req = store.delete('app_wallpaper');
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 

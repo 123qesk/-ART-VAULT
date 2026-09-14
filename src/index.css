@@ -117,6 +117,130 @@
     border-color: var(--card-border);
   }
 
+  /* Style presets: Glassmorphism, Neumorphism, Flat */
+  
+  /* 1. 毛玻璃风格 (Glassmorphism) */
+  html.theme-style-glass [style*="--card-bg"],
+  html.theme-style-glass [style*="--module-bg"],
+  html.theme-style-glass [style*="--navbar-bg"],
+  html.theme-style-glass [style*="--dock-bg"],
+  html.theme-style-glass [style*="--sidebar-bg"],
+  html.theme-style-glass [style*="--modal-bg"],
+  html.theme-style-glass [style*="--search-bg"],
+  html.theme-style-glass .app-card,
+  html.theme-style-glass .app-module,
+  html.theme-style-glass header,
+  html.theme-style-glass nav,
+  html.theme-style-glass dialog,
+  html.theme-style-glass [role="dialog"] {
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  html.dark.theme-style-glass [style*="--card-bg"],
+  html.dark.theme-style-glass [style*="--module-bg"],
+  html.dark.theme-style-glass [style*="--navbar-bg"],
+  html.dark.theme-style-glass [style*="--dock-bg"],
+  html.dark.theme-style-glass [style*="--sidebar-bg"],
+  html.dark.theme-style-glass [style*="--modal-bg"],
+  html.dark.theme-style-glass [style*="--search-bg"],
+  html.dark.theme-style-glass .app-card,
+  html.dark.theme-style-glass .app-module,
+  html.dark.theme-style-glass header,
+  html.dark.theme-style-glass nav,
+  html.dark.theme-style-glass dialog,
+  html.dark.theme-style-glass [role="dialog"] {
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  /* 2. 拟态风格 (Neumorphism - Multi-Module Enhanced) */
+  html.theme-style-neumorphism [style*="--card-bg"],
+  html.theme-style-neumorphism [style*="--module-bg"],
+  html.theme-style-neumorphism [style*="--modal-bg"],
+  html.theme-style-neumorphism [style*="--sidebar-bg"],
+  html.theme-style-neumorphism .app-card,
+  html.theme-style-neumorphism .app-module,
+  html.theme-style-neumorphism section.rounded-3xl,
+  html.theme-style-neumorphism section.rounded-2xl,
+  html.theme-style-neumorphism div.rounded-3xl.border,
+  html.theme-style-neumorphism div.rounded-2xl.border,
+  html.theme-style-neumorphism [role="dialog"] > div {
+    box-shadow: 8px 8px 18px rgba(160, 175, 195, 0.35), -8px -8px 18px rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  }
+
+  html.dark.theme-style-neumorphism [style*="--card-bg"],
+  html.dark.theme-style-neumorphism [style*="--module-bg"],
+  html.dark.theme-style-neumorphism [style*="--modal-bg"],
+  html.dark.theme-style-neumorphism [style*="--sidebar-bg"],
+  html.dark.theme-style-neumorphism .app-card,
+  html.dark.theme-style-neumorphism .app-module,
+  html.dark.theme-style-neumorphism section.rounded-3xl,
+  html.dark.theme-style-neumorphism section.rounded-2xl,
+  html.dark.theme-style-neumorphism div.rounded-3xl.border,
+  html.dark.theme-style-neumorphism div.rounded-2xl.border,
+  html.dark.theme-style-neumorphism [role="dialog"] > div {
+    box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.6), -6px -6px 16px rgba(255, 255, 255, 0.035) !important;
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* Neumorphic Navbar & Bottom Dock */
+  html.theme-style-neumorphism header,
+  html.theme-style-neumorphism nav[id="mobile-bottom-nav"] {
+    box-shadow: 0 6px 16px rgba(160, 175, 195, 0.3), 0 -2px 10px rgba(255, 255, 255, 0.8) !important;
+  }
+  html.dark.theme-style-neumorphism header,
+  html.dark.theme-style-neumorphism nav[id="mobile-bottom-nav"] {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7), 0 -1px 8px rgba(255, 255, 255, 0.03) !important;
+  }
+
+  /* Neumorphic Input / Search bar / Textarea (Inset concave feel) */
+  html.theme-style-neumorphism input[type="text"],
+  html.theme-style-neumorphism input[type="search"],
+  html.theme-style-neumorphism textarea,
+  html.theme-style-neumorphism select {
+    box-shadow: inset 3px 3px 6px rgba(160, 175, 195, 0.35), inset -3px -3px 6px rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  }
+  html.dark.theme-style-neumorphism input[type="text"],
+  html.dark.theme-style-neumorphism input[type="search"],
+  html.dark.theme-style-neumorphism textarea,
+  html.dark.theme-style-neumorphism select {
+    box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.7), inset -2px -2px 6px rgba(255, 255, 255, 0.035) !important;
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* Neumorphic Buttons & Interactive Elements */
+  html.theme-style-neumorphism button.shadow-sm,
+  html.theme-style-neumorphism button.rounded-xl,
+  html.theme-style-neumorphism button.rounded-full,
+  html.theme-style-neumorphism button.rounded-2xl {
+    box-shadow: 4px 4px 10px rgba(160, 175, 195, 0.3), -3px -3px 8px rgba(255, 255, 255, 0.8);
+  }
+  html.dark.theme-style-neumorphism button.shadow-sm,
+  html.dark.theme-style-neumorphism button.rounded-xl,
+  html.dark.theme-style-neumorphism button.rounded-full,
+  html.dark.theme-style-neumorphism button.rounded-2xl {
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.5), -3px -3px 8px rgba(255, 255, 255, 0.03);
+  }
+
+  html.theme-style-neumorphism button:active {
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.2), inset -2px -2px 5px rgba(255, 255, 255, 0.6) !important;
+  }
+
+  /* 3. 扁平风格 (Flat) */
+  html.theme-style-flat [style*="--card-bg"],
+  html.theme-style-flat [style*="--module-bg"],
+  html.theme-style-flat .app-card,
+  html.theme-style-flat .app-module {
+    box-shadow: none !important;
+    border-radius: 6px !important;
+  }
 }
 
 /* Global theme-aware text selection */

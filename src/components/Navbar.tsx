@@ -143,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }}
                 placeholder="搜索作品名称、标签 (#人物、#夜景)..."
                 style={{
-                  backgroundColor: 'var(--card-bg)',
+                  backgroundColor: 'var(--search-bg)',
                   borderColor: 'var(--card-border)',
                   color: 'var(--text-main)',
                 }}
@@ -181,7 +181,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="btn-add-artwork-top"
               onClick={onOpenAddModal}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-full bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-white shadow-sm hover:shadow active:scale-95 transition-all"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-full shadow-sm hover:shadow active:scale-95 transition-all text-white"
+              style={{ backgroundColor: 'var(--accent-gold)' }}
             >
               <Plus className="w-4 h-4" />
               <span>添加作品</span>
@@ -268,7 +269,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="mobile-add-btn"
               onClick={onOpenAddModal}
-              className="sm:hidden p-2 rounded-full bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 active:scale-95"
+              className="sm:hidden p-2 rounded-full active:scale-95 text-white shadow-xs"
+              style={{ backgroundColor: 'var(--accent-gold)' }}
               title="添加作品"
             >
               <Plus className="w-4 h-4" />
@@ -293,7 +295,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }}
                 placeholder="搜索作品名称、标签 (#人物、#夜景)..."
                 style={{
-                  backgroundColor: 'var(--card-bg)',
+                  backgroundColor: 'var(--search-bg)',
                   borderColor: 'var(--card-border)',
                   color: 'var(--text-main)',
                 }}

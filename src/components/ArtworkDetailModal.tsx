@@ -150,7 +150,8 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
     <div
       ref={containerRef}
       id="artwork-detail-lightbox"
-      className="fixed inset-0 z-50 flex flex-col lg:flex-row bg-[#0E1015]/95 backdrop-blur-md text-neutral-100 overflow-hidden select-none animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex flex-col lg:flex-row backdrop-blur-md text-neutral-100 overflow-hidden select-none animate-in fade-in duration-200"
+      style={{ backgroundColor: 'var(--modal-bg)' }}
     >
       {/* Top Floating Control Bar */}
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2 sm:p-4 bg-gradient-to-b from-black/85 via-black/50 to-transparent pointer-events-auto">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, GripVertical, Trash2, Plus, Check, Palette } from 'lucide-react';
 import { CategoryItem, StatusItem } from '../types';
 
@@ -32,14 +32,19 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const [newStatusName, setNewStatusName] = useState('');
   const [newStatusColor, setNewStatusColor] = useState('amber');
 
-  // Tags local state (supports deleting and adding tags)
+  // Tags local state (supports deleting and adding tags, strictly tags only - strips any status names)
   const [localTags, setLocalTags] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('art_vault_all_available_tags');
-      if (saved) return JSON.parse(saved);
+      const statusNames = statuses.map((s) => s.name);
+      if (saved) {
+        const parsed: string[] = JSON.parse(saved);
+        // Exclude any status names that might have been mixed in
+        return parsed.filter((t) => !statusNames.includes(t));
+      }
       const oldCustom = localStorage.getItem('art_vault_custom_user_tags');
-      const customList = oldCustom ? JSON.parse(oldCustom) : [];
-      return Array.from(new Set([...customList, ...DEFAULT_BUILTIN_TAGS]));
+      const customList: string[] = oldCustom ? JSON.parse(oldCustom) : [];
+      return Array.from(new Set([...customList, ...DEFAULT_BUILTIN_TAGS])).filter((t) => !statusNames.includes(t));
     } catch {
       return DEFAULT_BUILTIN_TAGS;
     }
@@ -50,6 +55,28 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const [draggedCatIndex, setDraggedCatIndex] = useState<number | null>(null);
   const [draggedStatusIndex, setDraggedStatusIndex] = useState<number | null>(null);
 
+  // Sync and clean tags whenever the modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setLocalCategories(categories);
+      setLocalStatuses(statuses);
+      try {
+        const saved = localStorage.getItem('art_vault_all_available_tags');
+        const statusNames = statuses.map((s) => s.name);
+        if (saved) {
+          const parsed: string[] = JSON.parse(saved);
+          const cleaned = parsed.filter((t) => !statusNames.includes(t));
+          setLocalTags(cleaned);
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem('art_vault_all_available_tags', JSON.stringify(cleaned));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [isOpen, categories, statuses]);
+
   if (!isOpen) return null;
 
   // --- Tag Handlers ---
@@ -57,6 +84,12 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     e.preventDefault();
     const clean = newTagName.trim().replace(/^#/, '');
     if (!clean) return;
+    // Disallow adding creation status names as tags
+    const statusNames = statuses.map((s) => s.name);
+    if (statusNames.includes(clean)) {
+      setNewTagName('');
+      return;
+    }
     if (!localTags.includes(clean)) {
       const updated = [clean, ...localTags];
       setLocalTags(updated);
@@ -73,7 +106,8 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   };
 
   const handleRestoreDefaultTags = () => {
-    const merged = Array.from(new Set([...DEFAULT_BUILTIN_TAGS, ...localTags]));
+    const statusNames = statuses.map((s) => s.name);
+    const merged = Array.from(new Set([...DEFAULT_BUILTIN_TAGS, ...localTags])).filter((t) => !statusNames.includes(t));
     setLocalTags(merged);
     localStorage.setItem('art_vault_all_available_tags', JSON.stringify(merged));
   };
@@ -155,7 +189,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div 
         style={{
-          backgroundColor: 'var(--card-bg)',
+          backgroundColor: 'var(--modal-bg)',
           borderColor: 'var(--card-border)',
         }}
         className="relative w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
@@ -221,13 +255,13 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            标签便签管理 ({localTags.length})
+            标签管理 ({localTags.length})
           </button>
         </div>
 
         {/* Tab Content */}
         <div className="p-4 sm:p-6 max-h-[65vh] sm:max-h-[60vh] overflow-y-auto space-y-4 sm:space-y-5">
-          {activeTab === 'categories' ? (
+          {activeTab === 'categories' && (
             <div className="space-y-4">
               {/* Add category input */}
               <form onSubmit={handleAddCategory} className="flex gap-2">
@@ -295,7 +329,9 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 ))}
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'statuses' && (
             <div className="space-y-4">
               {/* Add status form */}
               <form onSubmit={handleAddStatus} className="space-y-2 p-3.5 rounded-2xl bg-neutral-50 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38]">
@@ -402,7 +438,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   type="text"
                   value={newTagName}
                   onChange={(e) => setNewTagName(e.target.value)}
-                  placeholder="输入新标签便签名称 (如: 场景速写, 厚涂, 赛博)..."
+                  placeholder="输入新标签名称 (如: 场景速写, 厚涂, 赛博)..."
                   className="flex-1 px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
                 />
                 <button
@@ -417,7 +453,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               {/* Tags Grid with Delete Buttons */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-neutral-500 px-1">
-                  <span>所有便签/标签 (内置与自定义均可点击删除)</span>
+                  <span>所有标签 (内置与自定义均可点击删除)</span>
                   {localTags.length < DEFAULT_BUILTIN_TAGS.length && (
                     <button
                       type="button"
@@ -453,7 +489,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
                 {localTags.length === 0 && (
                   <div className="text-center py-8 text-neutral-400 text-xs">
-                    <p>暂无标签便签</p>
+                    <p>暂无标签</p>
                     <button
                       type="button"
                       onClick={handleRestoreDefaultTags}

@@ -70,6 +70,17 @@ export type ThemeMode = 'ivory' | 'pure_white' | 'dark' | 'pink' | 'pixel' | 'cu
 
 export type DisplayMode = 'default' | 'minimal';
 
+export type ThemeStyle = 'default' | 'glass' | 'neumorphism' | 'flat';
+
+export interface WallpaperConfig {
+  type: 'none' | 'image' | 'video';
+  url: string; // Base64 data URL, blob URL, or preset url/gradient
+  name?: string;
+  opacity: number; // 0 to 100
+  blur: number; // 0 to 40 (px)
+  fit?: 'cover' | 'contain' | 'repeat';
+}
+
 export interface CustomThemeColors {
   bgPage: string;
   cardBg: string;
@@ -80,4 +91,16 @@ export interface CustomThemeColors {
   accentColor: string;
   homeGreetingColor?: string;
   homeMottoColor?: string;
+  themeStyle?: ThemeStyle;
+  // Granular opacities for every part (0 to 100)
+  pageOpacity?: number;      // 页面底层背景透明度
+  contentOpacity?: number;   // 主体模块背景透明度
+  cardOpacity?: number;      // 模块卡片透明度
+  navbarOpacity?: number;    // 顶部导航栏透明度
+  dockOpacity?: number;      // 底部移动端导航透明度
+  modalOpacity?: number;     // 弹窗与浮层卡片透明度
+  searchOpacity?: number;    // 搜索框与输入框透明度
+  badgeOpacity?: number;     // 标签胶囊与徽章透明度
+  // Custom wallpaper config
+  wallpaper?: WallpaperConfig;
 }

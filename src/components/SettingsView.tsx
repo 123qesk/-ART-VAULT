@@ -14,9 +14,15 @@ import {
   User,
   Eye,
   EyeOff,
-  Feather
+  Feather,
+  Image as ImageIcon,
+  Video as VideoIcon,
+  Trash2,
+  Layers,
+  SlidersHorizontal,
+  Maximize2
 } from 'lucide-react';
-import { ThemeMode, CustomThemeColors, DisplayMode } from '../types';
+import { ThemeMode, CustomThemeColors, DisplayMode, WallpaperConfig } from '../types';
 import { useTheme, BUILTIN_THEMES_DEFAULT } from '../context/ThemeContext';
 
 interface SettingsViewProps {
@@ -127,6 +133,8 @@ const MODULE_COLOR_PRESETS = [
   { name: '黛黑深室', cardBg: '#141822', cardBorder: '#232A3B' },
 ];
 
+
+
 export const SettingsView: React.FC<SettingsViewProps> = ({
   onExportBackup,
   onImportBackup,
@@ -142,14 +150,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     resetCustomColors, 
     isThemeCustomized,
     displayMode,
-    setDisplayMode 
+    setDisplayMode,
+    wallpaper,
+    setWallpaper,
+    removeWallpaper,
   } = useTheme();
 
   const [importStatus, setImportStatus] = useState<string>('');
+  const [wallpaperUploadStatus, setWallpaperUploadStatus] = useState<string>('');
   const [isResetConfirming, setIsResetConfirming] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const wallpaperInputRef = useRef<HTMLInputElement | null>(null);
 
   const activePreset = PRESET_THEMES.find(p => p.id === theme || (p.id === 'ivory' && theme === 'light')) || PRESET_THEMES[0];
+
+  const handleWallpaperFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+
+    if (!isImage && !isVideo) {
+      setWallpaperUploadStatus('请上传有效的图片(PNG/JPG/WebP/GIF/SVG)或视频(MP4/WebM)文件');
+      setTimeout(() => setWallpaperUploadStatus(''), 4000);
+      return;
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const url = ev.target?.result as string;
+        await setWallpaper({
+          type: isVideo ? 'video' : 'image',
+          url,
+          name: file.name,
+          opacity: wallpaper.opacity !== undefined ? wallpaper.opacity : 85,
+          blur: wallpaper.blur || 0,
+          fit: wallpaper.fit || 'cover',
+        });
+        setWallpaperUploadStatus(`已成功应用自定义壁纸: ${file.name}`);
+        setTimeout(() => setWallpaperUploadStatus(''), 3500);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setWallpaperUploadStatus(`上传失败: ${err.message}`);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -766,6 +813,232 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
+          {/* Theme Style & Granular Opacity Controls */}
+          <div className="space-y-4">
+            {/* Style Selector */}
+            <div 
+              className="p-5 rounded-2xl border space-y-3"
+              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                    <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                    <span>选择整体质感风格</span>
+                  </label>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    实时切换全局视觉层级质感，毛玻璃与拟态风格已适配全站各个卡片与功能模块
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                {[
+                  { id: 'default', label: '默认常规', desc: '精致微光阴影' },
+                  { id: 'glass', label: '毛玻璃 (Glass)', desc: '透光磨砂与镜面光晕' },
+                  { id: 'neumorphism', label: '拟态 (Neumorphic)', desc: '浮雕双向光影凸起' },
+                  { id: 'flat', label: '扁平极简 (Flat)', desc: '无阴影纯净利落' }
+                ].map(style => {
+                  const isSelected = (customColors.themeStyle || 'default') === style.id;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => setCustomColors({ themeStyle: style.id as any })}
+                      className={`p-3 rounded-xl text-left transition-all border flex flex-col justify-between ${
+                        isSelected ? 'ring-2' : 'hover:border-amber-500/50'
+                      }`}
+                      style={{
+                        backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))' : 'var(--bg-page)',
+                        borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+                        color: 'var(--text-main)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold">{style.label}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />}
+                      </div>
+                      <span className="text-[10px] mt-1 opacity-70" style={{ color: 'var(--text-muted)' }}>
+                        {style.desc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Granular Opacities for Every Part */}
+            <div 
+              className="p-5 rounded-2xl border space-y-4"
+              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                    <SlidersHorizontal className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                    <span>各模块独立透明度自定义</span>
+                  </h4>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    自由调整全站各个独立区域的透明度，配合自定义壁纸可获得通透半透明与层叠质感
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCustomColors({
+                    pageOpacity: 100,
+                    contentOpacity: 100,
+                    cardOpacity: 100,
+                    navbarOpacity: 100,
+                    dockOpacity: 100,
+                    modalOpacity: 100,
+                    searchOpacity: 100,
+                    badgeOpacity: 100,
+                  })}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium border hover:opacity-80 transition-opacity"
+                  style={{
+                    backgroundColor: 'var(--bg-page)',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  重置为 100%
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
+                {/* 0. 页面底色透明度 */}
+                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>页面底色透明度</label>
+                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                      {customColors.pageOpacity !== undefined ? customColors.pageOpacity : 100}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={customColors.pageOpacity !== undefined ? customColors.pageOpacity : 100}
+                    onChange={(e) => setCustomColors({ pageOpacity: Number(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>网页最底层全屏背景色，调低可透出壁纸</span>
+                </div>
+
+                {/* 1. 主体模块背景透明度 */}
+                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>主体模块背景透明度</label>
+                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                      {customColors.contentOpacity !== undefined ? customColors.contentOpacity : 100}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={customColors.contentOpacity !== undefined ? customColors.contentOpacity : 100}
+                    onChange={(e) => setCustomColors({ contentOpacity: Number(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>主体框架、作品分类栏、日记容器与模式选择</span>
+                </div>
+
+                {/* 2. 模块与卡片 */}
+                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>模块卡片透明度</label>
+                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                      {customColors.cardOpacity !== undefined ? customColors.cardOpacity : 100}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={customColors.cardOpacity !== undefined ? customColors.cardOpacity : 100}
+                    onChange={(e) => setCustomColors({ cardOpacity: Number(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>画作卡片、日记模块与统计看板</span>
+                </div>
+
+                {/* 2. 顶部导航栏 */}
+                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>顶部导航栏透明度</label>
+                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                      {customColors.navbarOpacity !== undefined ? customColors.navbarOpacity : 100}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={customColors.navbarOpacity !== undefined ? customColors.navbarOpacity : 100}
+                    onChange={(e) => setCustomColors({ navbarOpacity: Number(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>顶部吸顶固定 Header 区域</span>
+                </div>
+
+                {/* 3. 底部移动导航栏 (仅移动端显示) */}
+                <div className="p-3 rounded-xl border sm:hidden" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>移动端底栏透明度</label>
+                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                      {customColors.dockOpacity !== undefined ? customColors.dockOpacity : 100}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={customColors.dockOpacity !== undefined ? customColors.dockOpacity : 100}
+                    onChange={(e) => setCustomColors({ dockOpacity: Number(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>手机与窄屏端底部悬浮 Dock</span>
+                </div>
+
+                {/* 4. 搜索与输入框 */}
+                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>搜索与输入框透明度</label>
+                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                      {customColors.searchOpacity !== undefined ? customColors.searchOpacity : 90}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={customColors.searchOpacity !== undefined ? customColors.searchOpacity : 90}
+                    onChange={(e) => setCustomColors({ searchOpacity: Number(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>顶部搜索框与表单输入控件</span>
+                </div>
+
+                {/* 6. 弹窗与浮层 */}
+                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>弹窗与详情浮层透明度</label>
+                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                      {customColors.modalOpacity !== undefined ? customColors.modalOpacity : 98}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    value={customColors.modalOpacity !== undefined ? customColors.modalOpacity : 98}
+                    onChange={(e) => setCustomColors({ modalOpacity: Number(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>添加/编辑画作弹窗与大图查看器</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Real-time Preview */}
           <div 
             className="p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
@@ -796,6 +1069,157 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </section>
 
+      {/* NEW: Wallpaper & Custom Background Management Section */}
+      <section 
+        className="p-6 rounded-3xl border shadow-xs space-y-5"
+        style={{
+          backgroundColor: 'var(--card-bg)',
+          borderColor: 'var(--card-border)',
+        }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+              <ImageIcon className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+              <span>壁纸与动态背景</span>
+            </h2>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              支持上传自定义本地图片、GIF动图或MP4/WebM视频作为应用全屏背景，可自由调节透明度与高斯模糊度。
+            </p>
+          </div>
+
+          {/* Current Wallpaper Status Badge & Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {wallpaper && wallpaper.type !== 'none' && wallpaper.url && (
+              <button
+                onClick={() => removeWallpaper()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-rose-500 hover:bg-rose-500/10 border border-rose-500/30 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>清除壁纸</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => wallpaperInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold text-white shadow-xs hover:opacity-90 transition-all"
+              style={{ backgroundColor: 'var(--accent-gold)' }}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>上传图片/视频壁纸</span>
+            </button>
+            <input
+              type="file"
+              ref={wallpaperInputRef}
+              onChange={handleWallpaperFileChange}
+              accept="image/*,video/mp4,video/webm"
+              className="hidden"
+            />
+          </div>
+        </div>
+
+        {/* Upload feedback */}
+        {wallpaperUploadStatus && (
+          <div 
+            className="p-3 rounded-xl text-xs font-medium border animate-fadeIn flex items-center justify-between"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--accent-gold) 40%, transparent)',
+              color: 'var(--text-main)',
+            }}
+          >
+            <span>{wallpaperUploadStatus}</span>
+            <button onClick={() => setWallpaperUploadStatus('')} className="text-xs opacity-60 hover:opacity-100">✕</button>
+          </div>
+        )}
+
+
+
+        {/* Wallpaper Adjustments (Opacity, Blur, Fit) */}
+        {wallpaper && wallpaper.type !== 'none' && wallpaper.url && (
+          <div 
+            className="p-5 rounded-2xl border space-y-4"
+            style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
+          >
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
+                <Sliders className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
+                <span>壁纸效果调节参数</span>
+              </h4>
+              <span className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
+                类型: {wallpaper.type === 'video' ? '动态视频' : '静止/动图画质'} {wallpaper.name ? `· ${wallpaper.name}` : ''}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* 1. Opacity */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>壁纸不透明度</label>
+                  <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                    {wallpaper.opacity !== undefined ? wallpaper.opacity : 85}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="100"
+                  value={wallpaper.opacity !== undefined ? wallpaper.opacity : 85}
+                  onChange={(e) => setWallpaper({ ...wallpaper, opacity: Number(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+                <span className="text-[10px] block" style={{ color: 'var(--text-muted)' }}>建议设置在 60% ~ 90% 以保持文字可读性</span>
+              </div>
+
+              {/* 2. Blur */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>高斯模糊度</label>
+                  <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                    {wallpaper.blur || 0}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="35"
+                  value={wallpaper.blur || 0}
+                  onChange={(e) => setWallpaper({ ...wallpaper, blur: Number(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+                <span className="text-[10px] block" style={{ color: 'var(--text-muted)' }}>增加模糊可营造柔和的背景景深氛围</span>
+              </div>
+
+              {/* 3. Fit Mode */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold block" style={{ color: 'var(--text-main)' }}>填充适应方式</label>
+                <div className="flex gap-2">
+                  {[
+                    { id: 'cover', label: '裁剪铺满 (Cover)' },
+                    { id: 'contain', label: '完整居中 (Contain)' },
+                  ].map((fitOption) => (
+                    <button
+                      key={fitOption.id}
+                      onClick={() => setWallpaper({ ...wallpaper, fit: fitOption.id as any })}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        (wallpaper.fit || 'cover') === fitOption.id ? 'font-bold' : ''
+                      }`}
+                      style={{
+                        backgroundColor: (wallpaper.fit || 'cover') === fitOption.id ? 'var(--accent-gold)' : 'var(--card-bg)',
+                        color: (wallpaper.fit || 'cover') === fitOption.id ? '#FFFFFF' : 'var(--text-main)',
+                        borderColor: (wallpaper.fit || 'cover') === fitOption.id ? 'var(--accent-gold)' : 'var(--card-border)',
+                      }}
+                    >
+                      {fitOption.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* Database & Data Management */}
       <section 
         className="p-6 rounded-3xl border shadow-xs space-y-5"
@@ -808,7 +1232,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div>
             <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
               <Database className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-              <span>数据存储与备份 (IndexedDB)</span>
+              <span>数据存储与备份</span>
             </h2>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
               您的作品原图/动图/视频、标签、日期及日记均储存于浏览器专属的本地数据库 (IndexedDB)，安全私密且不限常规5MB容量。

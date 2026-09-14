@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ThemeMode, CustomThemeColors, DisplayMode } from '../types';
+import { ThemeMode, CustomThemeColors, DisplayMode, WallpaperConfig } from '../types';
+import { vaultDB } from '../services/db';
 
 export const BUILTIN_THEMES_DEFAULT: Record<ThemeMode, CustomThemeColors> = {
   ivory: {
@@ -94,6 +95,9 @@ interface ThemeContextType {
   isThemeCustomized: boolean;
   displayMode: DisplayMode;
   setDisplayMode: (mode: DisplayMode) => void;
+  wallpaper: WallpaperConfig;
+  setWallpaper: (wallpaper: WallpaperConfig) => Promise<void>;
+  removeWallpaper: () => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -101,6 +105,15 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_KEY = 'art_vault_theme_mode_v3';
 const THEME_PALETTES_KEY = 'art_vault_theme_palettes_v3';
 const DISPLAY_MODE_KEY = 'art_vault_display_mode_v1';
+const WALLPAPER_STORAGE_KEY = 'art_vault_wallpaper_state_v1';
+
+const DEFAULT_WALLPAPER: WallpaperConfig = {
+  type: 'none',
+  url: '',
+  opacity: 85,
+  blur: 0,
+  fit: 'cover',
+};
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
@@ -130,6 +143,62 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return {};
   });
+
+  // Wallpaper state
+  const [wallpaper, setWallpaperState] = useState<WallpaperConfig>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem(WALLPAPER_STORAGE_KEY);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return DEFAULT_WALLPAPER;
+  });
+
+  // Load wallpaper from IndexedDB on initial mount
+  useEffect(() => {
+    let mounted = true;
+    vaultDB.getWallpaper().then((savedWp) => {
+      if (mounted && savedWp) {
+        setWallpaperState(savedWp);
+        try {
+          // If small, cache in localStorage
+          if (savedWp.url.length < 500000) {
+            localStorage.setItem(WALLPAPER_STORAGE_KEY, JSON.stringify(savedWp));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const setWallpaper = async (newWp: WallpaperConfig) => {
+    setWallpaperState(newWp);
+    try {
+      if (newWp.url.length < 500000) {
+        localStorage.setItem(WALLPAPER_STORAGE_KEY, JSON.stringify(newWp));
+      } else {
+        localStorage.removeItem(WALLPAPER_STORAGE_KEY);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    await vaultDB.saveWallpaper(newWp);
+  };
+
+  const removeWallpaper = async () => {
+    setWallpaperState(DEFAULT_WALLPAPER);
+    localStorage.removeItem(WALLPAPER_STORAGE_KEY);
+    await vaultDB.deleteWallpaper();
+  };
 
   // Effective colors for the currently selected theme
   const currentThemeKey = theme === 'light' ? 'ivory' : theme;
@@ -167,7 +236,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       'theme-pure_white',
       'theme-pink',
       'theme-pixel',
-      'theme-custom'
+      'theme-custom',
+      'theme-style-default',
+      'theme-style-glass',
+      'theme-style-neumorphism',
+      'theme-style-flat'
     );
 
     // Add current theme class
@@ -176,11 +249,44 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.classList.add('dark');
     }
 
-    // Always inject CSS variables on root so that top bar, modules, and UI reflect the colors dynamically
-    root.style.setProperty('--bg-page', currentColors.bgPage);
-    root.style.setProperty('--card-bg', currentColors.cardBg);
-    root.style.setProperty('--module-bg', currentColors.cardBg);
-    root.style.setProperty('--navbar-bg', currentColors.navbarBg || currentColors.cardBg);
+    // Determine granular opacities (0 - 100)
+    const pageOp = currentColors.pageOpacity !== undefined ? currentColors.pageOpacity : 100;
+    const cardOp = currentColors.cardOpacity !== undefined ? currentColors.cardOpacity : 100;
+    const navOp = currentColors.navbarOpacity !== undefined ? currentColors.navbarOpacity : 100;
+    const dockOp = currentColors.dockOpacity !== undefined ? currentColors.dockOpacity : navOp;
+    const contentOp = currentColors.contentOpacity !== undefined ? currentColors.contentOpacity : 100;
+    const modalOp = currentColors.modalOpacity !== undefined ? currentColors.modalOpacity : 98;
+    const searchOp = currentColors.searchOpacity !== undefined ? currentColors.searchOpacity : 90;
+    const badgeOp = currentColors.badgeOpacity !== undefined ? currentColors.badgeOpacity : 100;
+
+    // Apply styles to root classList
+    const themeStyle = currentColors.themeStyle || 'default';
+    root.classList.add(`theme-style-${themeStyle}`);
+    root.style.setProperty('--bg-page-raw', currentColors.bgPage);
+    root.style.setProperty('--bg-page', `color-mix(in srgb, ${currentColors.bgPage} ${pageOp}%, transparent)`);
+    
+    // Mix with transparent for opacities
+    root.style.setProperty('--card-bg-raw', currentColors.cardBg);
+    root.style.setProperty('--navbar-bg-raw', currentColors.navbarBg || currentColors.cardBg);
+    
+    root.style.setProperty('--card-bg', `color-mix(in srgb, ${currentColors.cardBg} ${cardOp}%, transparent)`);
+    root.style.setProperty('--module-bg', `color-mix(in srgb, ${currentColors.cardBg} ${cardOp}%, transparent)`);
+    root.style.setProperty('--navbar-bg', `color-mix(in srgb, ${currentColors.navbarBg || currentColors.cardBg} ${navOp}%, transparent)`);
+    root.style.setProperty('--dock-bg', `color-mix(in srgb, ${currentColors.navbarBg || currentColors.cardBg} ${dockOp}%, transparent)`);
+    root.style.setProperty('--content-bg', `color-mix(in srgb, ${currentColors.cardBg} ${contentOp}%, transparent)`);
+    root.style.setProperty('--modal-bg', `color-mix(in srgb, ${currentColors.cardBg} ${modalOp}%, transparent)`);
+    root.style.setProperty('--search-bg', `color-mix(in srgb, ${currentColors.cardBg} ${searchOp}%, transparent)`);
+    root.style.setProperty('--badge-bg', `color-mix(in srgb, ${currentColors.cardBg} ${badgeOp}%, transparent)`);
+    
+    root.style.setProperty('--page-opacity', `${pageOp}%`);
+    root.style.setProperty('--card-opacity', `${cardOp}%`);
+    root.style.setProperty('--navbar-opacity', `${navOp}%`);
+    root.style.setProperty('--dock-opacity', `${dockOp}%`);
+    root.style.setProperty('--content-opacity', `${contentOp}%`);
+    root.style.setProperty('--modal-opacity', `${modalOp}%`);
+    root.style.setProperty('--search-opacity', `${searchOp}%`);
+    root.style.setProperty('--badge-opacity', `${badgeOp}%`);
+
     root.style.setProperty('--navbar-border', currentColors.cardBorder);
     root.style.setProperty('--text-main', currentColors.textMain);
     root.style.setProperty('--text-muted', currentColors.textMuted);
@@ -239,6 +345,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isThemeCustomized,
         displayMode,
         setDisplayMode,
+        wallpaper,
+        setWallpaper,
+        removeWallpaper,
       }}
     >
       {children}

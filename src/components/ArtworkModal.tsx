@@ -123,18 +123,20 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const [isAddingNewCat, setIsAddingNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState('');
 
-  // Tag management state (supports deleting both built-in and custom tags)
+  // Tag management state (supports deleting both built-in and custom tags, strictly tags only)
   const [customTagInput, setCustomTagInput] = useState('');
   const [isTagDeleteMode, setIsTagDeleteMode] = useState(false);
   const [availableTags, setAvailableTags] = useState<string[]>(() => {
     try {
+      const statusNames = statuses.map((s) => s.name);
       const saved = localStorage.getItem('art_vault_all_available_tags');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed: string[] = JSON.parse(saved);
+        return parsed.filter((t) => !statusNames.includes(t));
       }
       const oldCustom = localStorage.getItem('art_vault_custom_user_tags');
-      const customList = oldCustom ? JSON.parse(oldCustom) : [];
-      return Array.from(new Set([...customList, ...DEFAULT_BUILTIN_TAGS]));
+      const customList: string[] = oldCustom ? JSON.parse(oldCustom) : [];
+      return Array.from(new Set([...customList, ...DEFAULT_BUILTIN_TAGS])).filter((t) => !statusNames.includes(t));
     } catch {
       return DEFAULT_BUILTIN_TAGS;
     }
@@ -145,6 +147,22 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   useEffect(() => {
     setBatchFiles([]);
     setBatchProgress('');
+    if (isOpen) {
+      try {
+        const saved = localStorage.getItem('art_vault_all_available_tags');
+        const statusNames = statuses.map((s) => s.name);
+        if (saved) {
+          const parsed: string[] = JSON.parse(saved);
+          const cleaned = parsed.filter((t) => !statusNames.includes(t));
+          setAvailableTags(cleaned);
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem('art_vault_all_available_tags', JSON.stringify(cleaned));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
     if (editArtwork) {
       setTitle(editArtwork.title);
       setType(editArtwork.type);
@@ -383,6 +401,11 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const handleAddCustomTag = () => {
     const clean = customTagInput.trim().replace(/^#/, '');
     if (!clean) return;
+    const statusNames = statuses.map((s) => s.name);
+    if (statusNames.includes(clean)) {
+      setCustomTagInput('');
+      return;
+    }
     const formatted = `#${clean}`;
     const currentTags = tagsInput.split(/\s+/).filter(Boolean);
     if (!currentTags.includes(formatted)) {
@@ -411,7 +434,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   };
 
   const handleRestoreDefaultTags = () => {
-    const merged = Array.from(new Set([...DEFAULT_BUILTIN_TAGS, ...availableTags]));
+    const statusNames = statuses.map((s) => s.name);
+    const merged = Array.from(new Set([...DEFAULT_BUILTIN_TAGS, ...availableTags])).filter((t) => !statusNames.includes(t));
     setAvailableTags(merged);
     localStorage.setItem('art_vault_all_available_tags', JSON.stringify(merged));
   };
@@ -518,7 +542,11 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
     >
       <div 
         id="artwork-modal-container"
-        className="relative w-full max-w-2xl my-auto rounded-2xl sm:rounded-3xl bg-white dark:bg-[#181B22] border border-[#E8E4DC] dark:border-[#262B38] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl my-auto rounded-2xl sm:rounded-3xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        style={{
+          backgroundColor: 'var(--modal-bg)',
+          borderColor: 'var(--card-border)',
+        }}
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-neutral-100 dark:border-neutral-800">
@@ -631,7 +659,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                           value={item.title}
                           onChange={(e) => handleUpdateBatchTitle(item.id, e.target.value)}
                           placeholder="在此填写此张作品名称"
-                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                          style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
                         />
                       </div>
 
@@ -760,7 +788,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="在此填写作品名称"
-                  className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                  style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   required
                 />
               </div>
@@ -837,7 +865,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                   id="modal-artwork-type"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                  style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   style={{
                     borderColor: 'var(--card-border)',
                   }}
@@ -859,7 +887,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                 id="modal-artwork-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
               >
                 {statuses.map((s) => (
                   <option key={s.id} value={s.name}>
@@ -874,7 +902,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                标签便签 (空格或回车分隔)
+                标签 (空格或回车分隔)
               </label>
               <span className="text-[11px] text-neutral-400">点击标签即可自由选中或取消</span>
             </div>
@@ -883,8 +911,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               type="text"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="请输入或选择便签，如: #人物 #场景 #二次元"
-              className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
+              placeholder="请输入或选择标签，如: #人物 #场景 #二次元"
+              style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
             />
 
             {/* Custom Tag Name input, Add Button & Delete Tag Button */}
@@ -899,8 +927,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                     handleAddCustomTag();
                   }
                 }}
-                placeholder="输入自定义便签/标签名，回车或点击添加..."
-                className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
+                placeholder="输入自定义标签名，回车或点击添加..."
+                style={{ backgroundColor: "var(--search-bg)" }} className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
               />
               <button
                 type="button"
@@ -908,7 +936,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                 style={{ backgroundColor: 'var(--accent-gold)' }}
                 className="px-3 py-1.5 rounded-xl text-white text-xs font-semibold shrink-0 hover:opacity-90 transition-opacity flex items-center gap-1 shadow-xs cursor-pointer"
               >
-                <Plus className="w-3 h-3" /> 添加便签
+                <Plus className="w-3 h-3" /> 添加标签
               </button>
               <button
                 type="button"
@@ -982,7 +1010,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
 
               {availableTags.length === 0 && (
                 <div className="flex items-center gap-2 py-1 text-xs text-neutral-400">
-                  <span>暂无可选用便签</span>
+                  <span>暂无可选用标签</span>
                   <button
                     type="button"
                     onClick={handleRestoreDefaultTags}
@@ -1016,7 +1044,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
+                style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
               />
             </div>
 
@@ -1047,7 +1075,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="记录这幅画的创作构思、心路历程、笔刷参数或灵感来源..."
-              className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
+              style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
             />
           </div>
 

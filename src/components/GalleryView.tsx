@@ -439,9 +439,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             onClick={() => { setSelectedCategory('all'); setSelectedTag(''); }}
             className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
               selectedCategory === 'all' && !selectedTag
-                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs font-bold'
+                ? 'shadow-xs font-bold'
                 : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:border-amber-400'
             }`}
+            style={{
+              backgroundColor: selectedCategory === 'all' && !selectedTag ? 'var(--accent-gold)' : undefined,
+              color: selectedCategory === 'all' && !selectedTag ? '#FFFFFF' : undefined,
+            }}
           >
             全部 ({categoryCounts.all})
           </button>
@@ -468,9 +472,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               onClick={() => { setSelectedCategory(cat.name); setSelectedTag(''); }}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
                 selectedCategory === cat.name
-                  ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs font-bold'
+                  ? 'shadow-xs font-bold'
                   : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:border-amber-400'
               }`}
+              style={{
+                backgroundColor: selectedCategory === cat.name ? 'var(--accent-gold)' : undefined,
+                color: selectedCategory === cat.name ? '#FFFFFF' : undefined,
+              }}
             >
               <span>{cat.name}</span>
               <span className="ml-1 opacity-70 font-mono text-[10px]">({categoryCounts[cat.name] || 0})</span>
@@ -500,7 +508,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         >
           {/* Main Categories Section */}
           <div 
-            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+            style={{ backgroundColor: 'var(--content-bg)', borderColor: 'var(--card-border)' }}
             className="border rounded-2xl p-3 shadow-xs"
           >
             <div className="flex items-center justify-between px-3 py-1.5">
@@ -523,9 +531,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 onClick={() => { setSelectedCategory('all'); setSelectedTag(''); }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                   selectedCategory === 'all' && !selectedTag
-                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                    ? 'font-bold'
                     : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                 }`}
+                style={{
+                  backgroundColor: selectedCategory === 'all' && !selectedTag ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : undefined,
+                  color: selectedCategory === 'all' && !selectedTag ? 'var(--accent-gold)' : undefined,
+                }}
               >
                 <span>全部作品</span>
                 <span className="text-xs font-mono opacity-80">{categoryCounts.all}</span>
@@ -538,9 +550,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   onClick={() => { setSelectedCategory(cat.name); setSelectedTag(''); }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                     selectedCategory === cat.name
-                      ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                      ? 'font-bold'
                       : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                   }`}
+                  style={{
+                    backgroundColor: selectedCategory === cat.name ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : undefined,
+                    color: selectedCategory === cat.name ? 'var(--accent-gold)' : undefined,
+                  }}
                 >
                   <span className="truncate">{cat.name}</span>
                   <span className="text-xs font-mono opacity-80">{categoryCounts[cat.name] || 0}</span>
@@ -594,7 +610,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           {/* Tag Cloud */}
           {allTags.length > 0 && (
             <div 
-              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+              style={{ backgroundColor: 'var(--content-bg)', borderColor: 'var(--card-border)' }}
               className="border rounded-2xl p-4 shadow-xs"
             >
               <div className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-3">
@@ -631,7 +647,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           
           {/* Top Filter & Toolbar with Updated Title and 3 Layout Options */}
           <div 
-            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+            style={{ backgroundColor: 'var(--content-bg)', borderColor: 'var(--card-border)' }}
             className="p-4 rounded-2xl border shadow-xs flex flex-wrap items-center justify-between gap-4"
           >
             
@@ -644,7 +660,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   id="filter-date"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-                  className="px-2.5 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs"
+                  style={{ backgroundColor: "var(--search-bg)" }} className="px-2.5 py-1.5 rounded-lg text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs"
                 >
                   <option value="all">全部日期</option>
                   <option value="today">今天</option>
@@ -661,7 +677,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   id="filter-status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs"
+                  style={{ backgroundColor: "var(--search-bg)" }} className="px-2.5 py-1.5 rounded-lg text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs"
                 >
                   <option value="all">全部状态</option>
                   {statuses.map((s) => (
@@ -679,7 +695,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   id="filter-sort"
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                  className="px-2.5 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs"
+                  style={{ backgroundColor: "var(--search-bg)" }} className="px-2.5 py-1.5 rounded-lg text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs"
                 >
                   <option value="pinned_first">置顶优先 / 最新</option>
                   <option value="oldest">最早创作</option>
@@ -740,7 +756,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 {showMasonryDropdown && (
                   <div 
                     style={{
-                      backgroundColor: 'var(--card-bg)',
+                      backgroundColor: 'var(--content-bg)',
                       borderColor: 'var(--card-border)',
                     }}
                     className="absolute top-full right-0 sm:left-0 sm:right-auto mt-2 py-2 px-1.5 rounded-xl border shadow-xl z-40 min-w-[130px] animate-in fade-in zoom-in-95 duration-150"
@@ -884,7 +900,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           ) : (
             /* Empty State */
             <div 
-              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+              style={{ backgroundColor: 'var(--content-bg)', borderColor: 'var(--card-border)' }}
               className="p-12 rounded-3xl border text-center space-y-4 shadow-xs"
             >
               <div 
@@ -943,8 +959,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div 
             style={{
-              backgroundColor: 'var(--card-bg, #ffffff)',
-              borderColor: 'var(--card-border, #E8E4DC)',
+              backgroundColor: 'var(--modal-bg)',
+              borderColor: 'var(--card-border)',
             }}
             className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl border shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >

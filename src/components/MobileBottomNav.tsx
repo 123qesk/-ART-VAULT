@@ -30,7 +30,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       aria-label="移动端快速导航栏"
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#141822]/95 backdrop-blur-lg border-t border-[#E8E4DC] dark:border-[#232A3B] safe-area-bottom shadow-lg"
       style={{
-        backgroundColor: 'var(--navbar-bg, var(--bg-page))',
+        backgroundColor: 'var(--dock-bg, var(--navbar-bg, var(--bg-page)))',
         borderColor: 'var(--navbar-border, var(--card-border))',
       }}
     >

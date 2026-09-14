@@ -32,6 +32,7 @@ interface HomeViewProps {
 
 const DEFAULT_GREETING_TITLE = '你好，画师';
 const DEFAULT_GREETING_SUBTITLE = '今天也来画点什么吧。灵感稍纵即逝，将每一个笔触与故事装入画匣。';
+const DEFAULT_ARCHIVE_TITLE = '个人作品档案馆';
 const DEFAULT_ARTIST_NAME = '莫奈画师';
 const DEFAULT_ARTIST_SIGNATURE = '以画笔勾勒世界，用色彩记录生活 · 画室主理人 ✨';
 const DEFAULT_ARTIST_STATUS = '创作中';
@@ -52,6 +53,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
   });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(greetingTitle);
+
+  const [archiveTitle, setArchiveTitle] = useState<string>(() => {
+    return localStorage.getItem('art_vault_archive_title') || DEFAULT_ARCHIVE_TITLE;
+  });
+  const [isEditingArchiveTitle, setIsEditingArchiveTitle] = useState(false);
+  const [tempArchiveTitle, setTempArchiveTitle] = useState(archiveTitle);
 
   const [greetingSubtitle, setGreetingSubtitle] = useState<string>(() => {
     return localStorage.getItem('art_vault_greeting_subtitle') || DEFAULT_GREETING_SUBTITLE;
@@ -111,6 +118,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
     setGreetingTitle(val);
     localStorage.setItem('art_vault_greeting_title', val);
     setIsEditingTitle(false);
+  };
+
+  const handleSaveArchiveTitle = () => {
+    const val = tempArchiveTitle.trim() || DEFAULT_ARCHIVE_TITLE;
+    setArchiveTitle(val);
+    localStorage.setItem('art_vault_archive_title', val);
+    setIsEditingArchiveTitle(false);
   };
 
   const handleSaveSubtitle = () => {
@@ -187,7 +201,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           id="home-artist-profile-card"
           className="relative rounded-3xl p-6 sm:p-7 border shadow-xs transition-all animate-in fade-in duration-300 overflow-hidden"
           style={{
-            backgroundColor: 'var(--card-bg)',
+            backgroundColor: 'var(--content-bg)',
             borderColor: 'var(--card-border)',
           }}
         >
@@ -359,7 +373,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     >
                       <Paintbrush className="w-3 h-3" />
                       <span>{artistRole}</span>
-                      <Edit2 className="w-2.5 h-2.5 opacity-60 group-hover/role:opacity-100 transition-opacity ml-0.5" />
                     </button>
                   )}
                 </div>
@@ -437,15 +450,44 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div className="space-y-3 flex-1 max-w-2xl">
             <div 
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors group/archive cursor-pointer hover:opacity-80"
               style={{
                 backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
                 borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
                 color: 'var(--accent-gold)',
               }}
+              onClick={() => {
+                setTempArchiveTitle(archiveTitle);
+                setIsEditingArchiveTitle(true);
+              }}
+              title="点击修改名称"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>画师个人作品档案馆</span>
+              {isEditingArchiveTitle ? (
+                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    value={tempArchiveTitle}
+                    onChange={(e) => setTempArchiveTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveArchiveTitle();
+                      if (e.key === 'Escape') setIsEditingArchiveTitle(false);
+                    }}
+                    autoFocus
+                    className="font-medium bg-transparent border-b outline-none w-32"
+                    style={{ borderColor: 'var(--accent-gold)' }}
+                  />
+                  <Check 
+                    className="w-3.5 h-3.5 cursor-pointer hover:scale-110" 
+                    onClick={handleSaveArchiveTitle}
+                  />
+                </div>
+              ) : (
+                <span className="flex items-center gap-1">
+                  {archiveTitle}
+                  <Edit2 className="w-2.5 h-2.5 opacity-0 group-hover/archive:opacity-100 transition-opacity" />
+                </span>
+              )}
             </div>
 
             {/* Editable Greeting Title (follows standard text color) */}
@@ -463,7 +505,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     autoFocus
                     className="font-art-serif text-2xl sm:text-4xl font-bold tracking-tight border-2 rounded-xl px-3 py-1 focus:outline-none w-full shadow-sm"
                     style={{
-                      backgroundColor: 'var(--card-bg)',
+                      backgroundColor: 'var(--content-bg)',
                       borderColor: 'var(--accent-gold)',
                       color: 'var(--text-main)',
                     }}
@@ -513,7 +555,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     autoFocus
                     className="text-sm sm:text-base border-2 rounded-xl p-2.5 focus:outline-none w-full shadow-sm resize-none"
                     style={{
-                      backgroundColor: 'var(--card-bg)',
+                      backgroundColor: 'var(--content-bg)',
                       borderColor: 'var(--accent-gold)',
                       color: 'var(--text-muted)',
                     }}
@@ -582,7 +624,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             onClick={() => onSelectTab('gallery')}
             className="p-6 rounded-3xl border shadow-xs hover:shadow-md transition-all cursor-pointer group"
             style={{
-              backgroundColor: 'var(--card-bg)',
+              backgroundColor: 'var(--content-bg)',
               borderColor: 'var(--card-border)',
             }}
           >
@@ -603,7 +645,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             onClick={() => onSelectTab('gallery')}
             className="p-6 rounded-3xl border shadow-xs hover:shadow-md transition-all cursor-pointer group"
             style={{
-              backgroundColor: 'var(--card-bg)',
+              backgroundColor: 'var(--content-bg)',
               borderColor: 'var(--card-border)',
             }}
           >
@@ -624,7 +666,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             onClick={() => onSelectTab('favorites')}
             className="p-6 rounded-3xl border shadow-xs hover:shadow-md transition-all cursor-pointer group"
             style={{
-              backgroundColor: 'var(--card-bg)',
+              backgroundColor: 'var(--content-bg)',
               borderColor: 'var(--card-border)',
             }}
           >
@@ -732,7 +774,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div 
             className="p-10 rounded-3xl border-2 border-dashed text-center space-y-3"
             style={{
-              backgroundColor: 'var(--card-bg)',
+              backgroundColor: 'var(--content-bg)',
               borderColor: 'var(--card-border)',
             }}
           >
@@ -845,7 +887,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div 
             className="p-8 rounded-2xl border text-center text-xs"
             style={{
-              backgroundColor: 'var(--card-bg)',
+              backgroundColor: 'var(--content-bg)',
               borderColor: 'var(--card-border)',
               color: 'var(--text-muted)',
             }}
@@ -859,7 +901,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <div 
         className="p-6 rounded-3xl border text-center space-y-1"
         style={{
-          backgroundColor: 'var(--card-bg)',
+          backgroundColor: 'var(--content-bg)',
           borderColor: 'var(--card-border)',
         }}
       >
@@ -877,7 +919,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div 
             className="w-full max-w-md rounded-3xl p-6 border shadow-2xl space-y-5 animate-in zoom-in-95"
             style={{
-              backgroundColor: 'var(--card-bg)',
+              backgroundColor: 'var(--modal-bg)',
               borderColor: 'var(--card-border)',
             }}
           >
@@ -956,7 +998,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 onClick={() => avatarFileInputRef.current?.click()}
                 className="flex-1 py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors hover:border-amber-500"
                 style={{
-                  backgroundColor: 'var(--card-bg)',
+                  backgroundColor: 'var(--content-bg)',
                   borderColor: 'var(--card-border)',
                   color: 'var(--text-main)',
                 }}
