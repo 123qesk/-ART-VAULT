@@ -71,10 +71,10 @@ const GalleryListRow: React.FC<{
           ? '0 0 0 1.5px var(--accent-gold)'
           : undefined,
       }}
-      className="group relative flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
+      className="group relative flex flex-row items-center gap-3 sm:gap-4 p-2.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
     >
       {/* Left Thumbnail */}
-      <div className="relative w-full sm:w-40 h-28 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
+      <div className="relative w-20 h-20 sm:w-40 sm:h-28 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
         {art.mediaType === 'video' || art.fileType === 'video' ? (
           <video
             src={art.imageUrl}
@@ -97,45 +97,45 @@ const GalleryListRow: React.FC<{
         {art.isPinned && (
           <span 
             style={{ backgroundColor: 'var(--accent-gold)' }}
-            className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded text-white shadow-xs"
+            className="absolute top-1 left-1 sm:top-2 sm:left-2 inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded text-white shadow-xs"
           >
-            <Pin className="w-2.5 h-2.5 fill-current" /> 置顶
+            <Pin className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-current" /> <span className="hidden xs:inline">置顶</span>
           </span>
         )}
         {art.fileType === 'video' && (
-          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-600 text-white uppercase shadow-xs">
+          <span className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded bg-purple-600 text-white uppercase shadow-xs">
             VIDEO
           </span>
         )}
         {art.fileType === 'gif' && (
-          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-pink-600 text-white uppercase shadow-xs">
+          <span className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded bg-pink-600 text-white uppercase shadow-xs">
             GIF
           </span>
         )}
         {art.fileType === 'psd' && (
-          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white uppercase shadow-xs">
+          <span className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded bg-blue-600 text-white uppercase shadow-xs">
             PSD
           </span>
         )}
         {art.fileType === 'ai' && (
-          <span className="absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-600 text-white shadow-xs">
+          <span className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded bg-orange-600 text-white shadow-xs">
             AI
           </span>
         )}
       </div>
 
       {/* Right Meta Info */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-1 w-full">
+      <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5 w-full">
         <div>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
               <h3 
                 style={{ color: isHovered ? 'var(--accent-gold)' : undefined }}
-                className="font-art-serif text-base sm:text-lg font-bold text-neutral-900 dark:text-neutral-100 transition-colors"
+                className="font-art-serif text-sm sm:text-lg font-bold text-neutral-900 dark:text-neutral-100 transition-colors truncate"
               >
                 《{art.title}》
               </h3>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono">
+              <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono">
                 {art.type}
               </span>
               <span 
@@ -144,13 +144,13 @@ const GalleryListRow: React.FC<{
                   color: 'var(--accent-gold)',
                   borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
                 }}
-                className="text-xs px-2.5 py-0.5 rounded-full font-medium border"
+                className="hidden xs:inline-block text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium border"
               >
                 {art.status}
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 onClick={() => onTogglePin(art.id)}
@@ -159,22 +159,22 @@ const GalleryListRow: React.FC<{
                   borderColor: art.isPinned ? 'var(--accent-gold)' : isHovered ? 'var(--accent-gold)' : undefined,
                   color: art.isPinned ? '#FFFFFF' : isHovered ? 'var(--accent-gold)' : undefined,
                 }}
-                className={`p-2 rounded-xl border transition-all ${
+                className={`p-1.5 sm:p-2 rounded-xl border transition-all ${
                   art.isPinned ? 'shadow-xs' : 'text-neutral-400 hover:text-white border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
                 }`}
                 title={art.isPinned ? '取消置顶' : '置顶本作品'}
               >
-                <Pin className={`w-4 h-4 ${art.isPinned ? 'fill-current' : ''}`} />
+                <Pin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${art.isPinned ? 'fill-current' : ''}`} />
               </button>
               <button
                 type="button"
                 onClick={() => onToggleFavorite(art.id)}
-                className={`p-2 rounded-xl border transition-colors ${
+                className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${
                   art.isFavorite ? 'bg-rose-500 text-white border-rose-500 shadow-xs' : 'text-neutral-400 hover:text-rose-500 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
                 }`}
                 title={art.isFavorite ? '已收藏' : '加入收藏'}
               >
-                <Heart className={`w-4 h-4 ${art.isFavorite ? 'fill-current' : ''}`} />
+                <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${art.isFavorite ? 'fill-current' : ''}`} />
               </button>
             </div>
           </div>
@@ -856,12 +856,12 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               {layoutMode === 'masonry' && (
                 <div className={
                   masonryColumns === 1
-                    ? 'grid grid-cols-1 gap-4 sm:gap-6 items-stretch'
+                    ? 'grid grid-cols-1 gap-3 sm:gap-6 items-stretch'
                     : masonryColumns === 2
-                    ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 items-stretch'
-                    : masonryColumns === 4
-                    ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 items-stretch'
-                    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch'
+                    ? 'grid grid-cols-2 gap-3 sm:gap-6 items-stretch'
+                    : masonryColumns === 3
+                    ? 'grid grid-cols-3 gap-2 sm:gap-6 items-stretch'
+                    : 'grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 sm:gap-5 items-stretch'
                 }>
                   {filteredArtworks.map((art) => (
                     <ArtworkCard

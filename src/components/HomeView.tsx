@@ -927,7 +927,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkle className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
                 <h3 className="font-art-serif text-base font-bold" style={{ color: 'var(--text-main)' }}>
-                  设置画师头像
+                  设置头像
                 </h3>
               </div>
               <button
@@ -1004,7 +1004,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 }}
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span>从电脑上传图片</span>
+                <span>上传本地图片</span>
               </button>
 
               <button
