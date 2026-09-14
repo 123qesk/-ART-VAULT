@@ -170,15 +170,33 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
 
   const handleMouseUp = () => setIsDragging(false);
 
-  // Download image or source file
+  // Download image, video, or raw source file
   const handleDownload = () => {
     const link = document.createElement('a');
-    link.href = artwork.imageUrl;
-    const ext = artwork.fileType === 'psd' ? 'psd' : artwork.fileType === 'ai' ? 'ai' : 'png';
-    link.download = `${artwork.title.replace(/\s+/g, '_')}_${artwork.date}.${ext}`;
+    let blobUrlCreated = false;
+    if (artwork.imageBlob && artwork.imageBlob instanceof Blob) {
+      link.href = URL.createObjectURL(artwork.imageBlob);
+      blobUrlCreated = true;
+    } else {
+      link.href = artwork.imageUrl;
+    }
+    const ext = artwork.fileType === 'psd'
+      ? 'psd'
+      : artwork.fileType === 'ai'
+      ? 'ai'
+      : artwork.fileType === 'video'
+      ? 'mp4'
+      : artwork.fileType === 'gif'
+      ? 'gif'
+      : 'png';
+    const name = artwork.fileName || `${artwork.title.replace(/\s+/g, '_')}_${artwork.date}.${ext}`;
+    link.download = name;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    if (blobUrlCreated) {
+      setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+    }
   };
 
   // Related diaries
@@ -307,19 +325,30 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           </button>
         )}
 
-        {/* The Display Image with Smooth Zoom/Pan/Rotation & Scaler */}
+        {/* The Display Image / Video with Smooth Zoom/Pan/Rotation & Scaler */}
         <div
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel * ((artwork.previewScale || 100) / 100)}) rotate(${rotation}deg)`,
             transition: isDragging ? 'none' : 'transform 200ms ease-out',
           }}
-          className="max-h-[85%] max-w-[85%] flex items-center justify-center pointer-events-none select-none"
+          className="max-h-[85%] max-w-[85%] flex items-center justify-center select-none"
         >
-          <img
-            src={artwork.imageUrl}
-            alt={artwork.title}
-            className="max-h-[80vh] max-w-[80vw] object-contain shadow-2xl rounded-lg"
-          />
+          {artwork.fileType === 'video' ? (
+            <video
+              src={artwork.imageUrl}
+              controls
+              autoPlay
+              loop
+              playsInline
+              className="max-h-[80vh] max-w-[80vw] object-contain shadow-2xl rounded-lg pointer-events-auto"
+            />
+          ) : (
+            <img
+              src={artwork.imageUrl}
+              alt={artwork.title}
+              className="max-h-[80vh] max-w-[80vw] object-contain shadow-2xl rounded-lg pointer-events-none"
+            />
+          )}
         </div>
       </div>
 
@@ -334,7 +363,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="font-art-serif text-2xl font-bold text-white leading-tight">
-                  《{artwork.title}》
+                  {artwork.title}
                 </h2>
                 {artwork.fileName && (
                   <span className="text-[11px] font-mono text-neutral-400 block mt-0.5">

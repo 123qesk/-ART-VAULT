@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Heart, Pin, Calendar, Eye, Check, RotateCcw, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, Pin, Calendar, Eye, Check, RotateCcw, Trash2, Play } from 'lucide-react';
 import { Artwork, StatusItem } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 interface ArtworkCardProps {
   artwork: Artwork;
@@ -30,6 +31,30 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
   onPermanentDelete,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const { autoPlayMedia } = useTheme();
+  const [staticGifCover, setStaticGifCover] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (artwork.fileType === 'gif' && !autoPlayMedia && artwork.imageUrl) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || 400;
+          canvas.height = img.naturalHeight || 300;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            setStaticGifCover(canvas.toDataURL('image/png'));
+          }
+        } catch (e) {
+          // fallback
+        }
+      };
+      img.src = artwork.imageUrl;
+    }
+  }, [artwork.imageUrl, artwork.fileType, autoPlayMedia]);
 
   const getStatusBadge = (statusName: string) => {
     const customMatch = customStatuses?.find((s) => s.name === statusName);
@@ -91,7 +116,9 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        backgroundColor: 'var(--card-bg)',
+        backgroundColor: isSelected
+          ? 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))'
+          : 'var(--card-bg)',
         borderColor: (isSelected || isHovered || artwork.isPinned) ? 'var(--accent-gold)' : 'var(--card-border)',
         boxShadow: isSelected
           ? '0 0 0 2px var(--accent-gold), 0 10px 25px -5px color-mix(in srgb, var(--accent-gold) 30%, transparent)'
@@ -101,32 +128,67 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
           ? '0 0 0 1.5px var(--accent-gold)'
           : undefined,
       }}
-      className={`masonry-item group relative flex flex-col h-full rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer transform hover:-translate-y-1 shadow-xs ${
-        isSelected ? 'bg-amber-500/5' : ''
-      }`}
+      className="masonry-item group relative flex flex-col h-full rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer transform hover:-translate-y-1 shadow-xs"
     >
       {/* Artwork Image Container with balanced 4/3 mobile ratio */}
       <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
-        <div className="w-full h-full overflow-hidden flex items-center justify-center">
-          <img
-            src={artwork.imageUrl}
-            alt={artwork.title}
-            loading="lazy"
-            style={{
-              transform: artwork.previewScale ? `scale(${artwork.previewScale / 100})` : undefined,
-            }}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
-          />
+        <div className="w-full h-full overflow-hidden flex items-center justify-center relative">
+          {artwork.fileType === 'video' ? (
+            <div className="relative w-full h-full">
+              <video
+                key={`video-${autoPlayMedia}`}
+                src={artwork.imageUrl}
+                muted
+                loop={autoPlayMedia}
+                playsInline
+                autoPlay={autoPlayMedia}
+                preload="metadata"
+                style={{
+                  transform: artwork.previewScale ? `scale(${artwork.previewScale / 100})` : undefined,
+                }}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+              />
+              {!autoPlayMedia && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors pointer-events-none">
+                  <div className="p-2.5 rounded-full bg-black/60 text-white backdrop-blur-xs shadow-md transform group-hover:scale-110 transition-transform">
+                    <Play className="w-5 h-5 fill-current translate-x-0.5" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative w-full h-full">
+              <img
+                src={(artwork.fileType === 'gif' && !autoPlayMedia && staticGifCover) ? staticGifCover : artwork.imageUrl}
+                alt={artwork.title}
+                loading="lazy"
+                style={{
+                  transform: artwork.previewScale ? `scale(${artwork.previewScale / 100})` : undefined,
+                }}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+              />
+              {artwork.fileType === 'gif' && !autoPlayMedia && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/15 group-hover:bg-black/5 transition-colors pointer-events-none">
+                  <div className="p-2 rounded-full bg-black/60 text-white backdrop-blur-xs shadow-md transform group-hover:scale-110 transition-transform">
+                    <Play className="w-4 h-4 fill-current translate-x-0.5" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Selection Checkbox Overlay */}
         {isSelectionMode && (
           <div className="absolute top-2 left-2 z-20 pointer-events-auto">
             <div
+              style={{
+                backgroundColor: isSelected ? 'var(--accent-gold)' : 'rgba(0,0,0,0.45)',
+                borderColor: isSelected ? 'var(--accent-gold)' : 'rgba(255,255,255,0.85)',
+                color: isSelected ? '#FFFFFF' : 'transparent',
+              }}
               className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all shadow-md ${
-                isSelected
-                  ? 'bg-amber-500 border-amber-500 text-white scale-105'
-                  : 'bg-black/40 border-white/80 text-transparent hover:border-white'
+                isSelected ? 'scale-105' : 'hover:border-white'
               }`}
             >
               <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -160,7 +222,12 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
               {artwork.type}
             </span>
 
-            {/* PSD / AI Badge */}
+            {/* PSD / AI / Video Badge */}
+            {artwork.fileType === 'video' && (
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-purple-600 text-white shadow-xs">
+                MP4 视频
+              </span>
+            )}
             {artwork.fileType === 'psd' && (
               <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-600 text-white shadow-xs">
                 PSD
@@ -265,9 +332,9 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
           <div className="flex items-start justify-between gap-2">
             <h3 
               style={{
-                color: isHovered ? 'var(--accent-gold)' : undefined,
+                color: isHovered ? 'var(--accent-gold)' : 'var(--text-main)',
               }}
-              className="font-art-serif text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1 transition-colors"
+              className="font-art-serif text-sm sm:text-base font-bold line-clamp-1 transition-colors"
             >
               {artwork.title}
             </h3>
@@ -278,8 +345,9 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
 
           <p 
             title={artwork.description || undefined}
-            className="text-xs text-neutral-500 dark:text-neutral-400 font-light mt-1 overflow-hidden"
+            className="text-xs font-light mt-1 overflow-hidden"
             style={{
+              color: 'var(--text-muted)',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
@@ -303,23 +371,31 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
               artwork.tags.slice(0, 3).map((tag, idx) => (
                 <span
                   key={idx}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text-muted)',
+                  }}
+                  className="text-[10px] px-1.5 py-0.5 rounded border font-mono"
                 >
                   #{tag.replace(/^#/, '')}
                 </span>
               ))
             ) : (
-              <span className="text-[10px] text-neutral-400 opacity-40 font-mono">无标签</span>
+              <span className="text-[10px] opacity-40 font-mono" style={{ color: 'var(--text-muted)' }}>无标签</span>
             )}
             {artwork.tags && artwork.tags.length > 3 && (
-              <span className="text-[10px] text-neutral-400 font-mono">
+              <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
                 +{artwork.tags.length - 3}
               </span>
             )}
           </div>
 
           {/* Footer Meta */}
-          <div className="flex items-center justify-between pt-1.5 border-t border-neutral-100 dark:border-neutral-800/80 text-[11px] text-neutral-400 dark:text-neutral-500 font-mono">
+          <div 
+            style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
+            className="flex items-center justify-between pt-1.5 border-t text-[11px] font-mono"
+          >
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" style={{ color: isHovered ? 'var(--accent-gold)' : undefined }} />
               {artwork.date}

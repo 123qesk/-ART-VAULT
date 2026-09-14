@@ -438,7 +438,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 }}
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>收纳新画</span>
+                <span>添加作品</span>
               </button>
             </div>
           </div>

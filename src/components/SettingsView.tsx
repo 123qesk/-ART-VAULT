@@ -22,7 +22,10 @@ import {
   SlidersHorizontal,
   Maximize2,
   BookmarkPlus,
-  Edit3
+  Edit3,
+  Play,
+  VideoOff,
+  Film
 } from 'lucide-react';
 import { ThemeMode, CustomThemeColors, DisplayMode, WallpaperConfig } from '../types';
 import { useTheme, BUILTIN_THEMES_DEFAULT } from '../context/ThemeContext';
@@ -156,6 +159,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     wallpaper,
     setWallpaper,
     removeWallpaper,
+    autoPlayMedia,
+    setAutoPlayMedia,
     savedPresets,
     activePresetId,
     addPreset,
@@ -449,6 +454,127 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               >
                 <EyeOff className="w-3 h-3" style={{ color: 'var(--accent-gold)' }} /> 已隐
               </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Video & Animated GIF Auto-Play Management */}
+      <section 
+        id="settings-autoplay-management"
+        className="p-6 rounded-3xl border shadow-xs space-y-4"
+        style={{
+          backgroundColor: 'var(--card-bg)',
+          borderColor: 'var(--card-border)',
+        }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+              <Film className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+              <span>动态视频管理</span>
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              控制页面列表中 MP4 动态视频与动图 GIF 的播放行为。关闭时仅展示静态封面，不自动播放。
+            </p>
+          </div>
+          <span 
+            className="text-xs px-2.5 py-1 rounded-full font-medium border transition-colors self-start sm:self-auto shrink-0"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+              color: 'var(--accent-gold)',
+            }}
+          >
+            当前：{autoPlayMedia ? '自动播放 (开启)' : '仅静态封面 (关闭)'}
+          </span>
+        </div>
+
+        {/* Two Mode Option Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          {/* Auto-Play Enabled Card */}
+          <div
+            onClick={() => setAutoPlayMedia(true)}
+            className="p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative overflow-hidden shadow-xs"
+            style={{
+              backgroundColor: autoPlayMedia ? 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))' : 'var(--card-bg)',
+              borderColor: autoPlayMedia ? 'var(--accent-gold)' : 'var(--card-border)',
+              boxShadow: autoPlayMedia ? '0 0 0 1px var(--accent-gold)' : undefined,
+            }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Play className="w-4 h-4 fill-current" style={{ color: 'var(--accent-gold)' }} />
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                    自动播放模式
+                  </h3>
+                  <span 
+                    className="text-[10px] px-1.5 py-0.5 rounded font-medium border transition-colors"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                      borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                      color: 'var(--accent-gold)',
+                    }}
+                  >
+                    默认开启
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  开启时，视频与 GIF 动图在画廊和列表中直接自动循环播放，动态呈现场景作品。
+                </p>
+              </div>
+              {autoPlayMedia && (
+                <div 
+                  className="w-5 h-5 rounded-full text-white flex items-center justify-center shrink-0 shadow-xs"
+                  style={{ backgroundColor: 'var(--accent-gold)' }}
+                >
+                  <Check className="w-3 h-3 stroke-[2.5]" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Auto-Play Disabled Card */}
+          <div
+            onClick={() => setAutoPlayMedia(false)}
+            className="p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 relative overflow-hidden shadow-xs"
+            style={{
+              backgroundColor: !autoPlayMedia ? 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))' : 'var(--card-bg)',
+              borderColor: !autoPlayMedia ? 'var(--accent-gold)' : 'var(--card-border)',
+              boxShadow: !autoPlayMedia ? '0 0 0 1px var(--accent-gold)' : undefined,
+            }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <VideoOff className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                    仅显示静态封面
+                  </h3>
+                  <span 
+                    className="text-[10px] px-1.5 py-0.5 rounded font-medium border transition-colors"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                      borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                      color: 'var(--accent-gold)',
+                    }}
+                  >
+                    省流防打扰
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  关闭时，视频与 GIF 动图在页面中仅显示静止封面，不会自动播放，静谧且省流。
+                </p>
+              </div>
+              {!autoPlayMedia && (
+                <div 
+                  className="w-5 h-5 rounded-full text-white flex items-center justify-center shrink-0 shadow-xs"
+                  style={{ backgroundColor: 'var(--accent-gold)' }}
+                >
+                  <Check className="w-3 h-3 stroke-[2.5]" />
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -91,6 +91,13 @@ class ArtVaultDatabase {
         if (!includeDeleted) {
           items = items.filter((item) => !item.isDeleted);
         }
+        items.forEach((item) => {
+          if (item.imageBlob && item.imageBlob instanceof Blob) {
+            if (!item.imageUrl || item.imageUrl.startsWith('blob:')) {
+              item.imageUrl = URL.createObjectURL(item.imageBlob);
+            }
+          }
+        });
         // Pinned artworks first, then by date descending
         items.sort((a, b) => {
           if (a.isPinned && !b.isPinned) return -1;
@@ -109,7 +116,19 @@ class ArtVaultDatabase {
       const tx = db.transaction('artworks', 'readonly');
       const store = tx.objectStore('artworks');
       const req = store.get(id);
-      req.onsuccess = () => resolve(req.result || null);
+      req.onsuccess = () => {
+        const item = req.result as Artwork | undefined;
+        if (item) {
+          if (item.imageBlob && item.imageBlob instanceof Blob) {
+            if (!item.imageUrl || item.imageUrl.startsWith('blob:')) {
+              item.imageUrl = URL.createObjectURL(item.imageBlob);
+            }
+          }
+          resolve(item);
+        } else {
+          resolve(null);
+        }
+      };
       req.onerror = () => reject(req.error);
     });
   }

@@ -21,7 +21,8 @@ export interface BatchFileItem {
   file: File;
   title: string;
   imageUrl: string;
-  fileType: 'image' | 'psd' | 'ai';
+  imageBlob?: Blob;
+  fileType: 'image' | 'gif' | 'video' | 'psd' | 'ai';
   fileName: string;
   width: number;
   height: number;
@@ -105,7 +106,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const [status, setStatus] = useState<string>('已完成');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [fileType, setFileType] = useState<'image' | 'psd' | 'ai'>('image');
+  const [imageBlob, setImageBlob] = useState<Blob | undefined>();
+  const [fileType, setFileType] = useState<'image' | 'gif' | 'video' | 'psd' | 'ai'>('image');
   const [fileName, setFileName] = useState('');
   const [previewScale, setPreviewScale] = useState<number>(100);
   const [width, setWidth] = useState(3840);
@@ -171,6 +173,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       setStatus(editArtwork.status);
       setDescription(editArtwork.description || '');
       setImageUrl(editArtwork.imageUrl);
+      setImageBlob(editArtwork.imageBlob);
       setFileType(editArtwork.fileType || 'image');
       setFileName(editArtwork.fileName || '');
       setPreviewScale(editArtwork.previewScale || 100);
@@ -188,6 +191,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       setStatus(statuses[0]?.name || '已完成');
       setDescription('');
       setImageUrl('');
+      setImageBlob(undefined);
       setFileType('image');
       setFileName('');
       setPreviewScale(100);
@@ -207,6 +211,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
       const cleanName = file.name.replace(/\.[^/.]+$/, '');
       const id = `batch-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      const blobUrl = URL.createObjectURL(file);
 
       if (ext === 'psd') {
         const placeholder = generateFilePlaceholder(file.name, 'psd', file.size);
@@ -215,6 +220,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
           file,
           title: cleanName,
           imageUrl: placeholder,
+          imageBlob: file,
           fileType: 'psd',
           fileName: file.name,
           width: 4000,
@@ -231,6 +237,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
           file,
           title: cleanName,
           imageUrl: placeholder,
+          imageBlob: file,
           fileType: 'ai',
           fileName: file.name,
           width: 4000,
@@ -240,45 +247,78 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
         return;
       }
 
-      if (!file.type.startsWith('image/')) {
+      if (file.type.startsWith('video/') || ['mp4', 'webm', 'mov', 'm4v', 'mkv', 'avi'].includes(ext)) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        
+        const cleanupAndResolve = (w: number, h: number) => {
+          resolve({
+            id,
+            file,
+            title: cleanName,
+            imageUrl: blobUrl,
+            imageBlob: file,
+            fileType: 'video',
+            fileName: file.name,
+            width: w,
+            height: h,
+            sizeBytes: file.size,
+          });
+        };
+
+        video.onloadedmetadata = () => {
+          cleanupAndResolve(video.videoWidth || 1920, video.videoHeight || 1080);
+        };
+        video.onerror = () => {
+          cleanupAndResolve(1920, 1080);
+        };
+        video.src = blobUrl;
+        return;
+      }
+
+      if (!file.type.startsWith('image/') && !['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) {
         reject(new Error(`不支持的文件格式: ${file.name}`));
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const img = new Image();
-        img.onload = () => {
-          resolve({
-            id,
-            file,
-            title: cleanName,
-            imageUrl: result,
-            fileType: 'image',
-            fileName: file.name,
-            width: img.naturalWidth || 3000,
-            height: img.naturalHeight || 2000,
-            sizeBytes: file.size,
-          });
-        };
-        img.onerror = () => {
-          resolve({
-            id,
-            file,
-            title: cleanName,
-            imageUrl: result,
-            fileType: 'image',
-            fileName: file.name,
-            width: 3000,
-            height: 2000,
-            sizeBytes: file.size,
-          });
-        };
-        img.src = result;
+      const isGif = ext === 'gif' || file.type === 'image/gif';
+      const img = new Image();
+      
+      const cleanupAndResolve = (w: number, h: number, displayUrl: string) => {
+        resolve({
+          id,
+          file,
+          title: cleanName,
+          imageUrl: displayUrl,
+          imageBlob: file,
+          fileType: isGif ? 'gif' : 'image',
+          fileName: file.name,
+          width: w,
+          height: h,
+          sizeBytes: file.size,
+        });
       };
-      reader.onerror = () => reject(new Error(`读取失败: ${file.name}`));
-      reader.readAsDataURL(file);
+
+      // For large images (> 3MB), use Blob URL directly to prevent FileReader V8 string memory allocation crashes!
+      if (file.size > 3 * 1024 * 1024) {
+        img.onload = () => cleanupAndResolve(img.naturalWidth || 3000, img.naturalHeight || 2000, blobUrl);
+        img.onerror = () => cleanupAndResolve(3000, 2000, blobUrl);
+        img.src = blobUrl;
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          img.onload = () => cleanupAndResolve(img.naturalWidth || 3000, img.naturalHeight || 2000, dataUrl);
+          img.onerror = () => cleanupAndResolve(3000, 2000, dataUrl);
+          img.src = dataUrl;
+        };
+        reader.onerror = () => {
+          img.onload = () => cleanupAndResolve(img.naturalWidth || 3000, img.naturalHeight || 2000, blobUrl);
+          img.onerror = () => cleanupAndResolve(3000, 2000, blobUrl);
+          img.src = blobUrl;
+        };
+        reader.readAsDataURL(file);
+      }
     });
   };
 
@@ -294,6 +334,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
         setFileName(item.fileName);
         setFileType(item.fileType);
         setImageUrl(item.imageUrl);
+        setImageBlob(item.imageBlob);
         setWidth(item.width);
         setHeight(item.height);
         if (!title) {
@@ -473,6 +514,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
             status,
             description: description.trim(),
             imageUrl: item.imageUrl,
+            imageBlob: item.imageBlob,
             fileType: item.fileType,
             fileName: item.fileName,
             previewScale,
@@ -500,7 +542,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       return;
     }
     if (!imageUrl) {
-      setErrorMsg('请上传作品图片或工程源文件 (PSD / AI)');
+      setErrorMsg('请上传作品图片、视频或工程源文件 (PSD / AI)');
       return;
     }
 
@@ -515,6 +557,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
           status,
           description: description.trim(),
           imageUrl,
+          imageBlob: imageBlob || editArtwork?.imageBlob,
           fileType,
           fileName,
           previewScale,
@@ -631,14 +674,25 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                     >
                       {/* Thumbnail */}
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-neutral-100 dark:bg-neutral-900 border border-black/5 dark:border-white/5 flex items-center justify-center">
-                        <img 
-                          src={item.imageUrl} 
-                          alt={item.title} 
-                          className="w-full h-full object-cover" 
-                        />
+                        {item.fileType === 'video' ? (
+                          <video 
+                            src={item.imageUrl} 
+                            muted
+                            loop
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <img 
+                            src={item.imageUrl} 
+                            alt={item.title} 
+                            className="w-full h-full object-cover" 
+                          />
+                        )}
                         {item.fileType !== 'image' && (
                           <span 
-                            style={{ backgroundColor: 'var(--accent-gold)' }}
+                            style={{ backgroundColor: item.fileType === 'video' ? '#9333ea' : 'var(--accent-gold)' }}
                             className="absolute bottom-0 right-0 text-[8px] font-bold px-1 rounded-tl uppercase text-white"
                           >
                             {item.fileType}
@@ -694,15 +748,27 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               >
                 {imageUrl ? (
                   <div className="relative w-full max-h-60 overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center group">
-                    <img
-                      src={imageUrl}
-                      alt="Preview"
-                      style={{ transform: `scale(${previewScale / 100})` }}
-                      className="max-h-60 w-auto object-contain rounded-lg transition-transform duration-200"
-                    />
+                    {fileType === 'video' ? (
+                      <video
+                        src={imageUrl}
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                        style={{ transform: `scale(${previewScale / 100})` }}
+                        className="max-h-60 w-auto object-contain rounded-lg transition-transform duration-200"
+                      />
+                    ) : (
+                      <img
+                        src={imageUrl}
+                        alt="Preview"
+                        style={{ transform: `scale(${previewScale / 100})` }}
+                        className="max-h-60 w-auto object-contain rounded-lg transition-transform duration-200"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-medium">
                       <Upload className="w-4 h-4" />
-                      <span>更换图片或源文件 (可多选)</span>
+                      <span>更换视频、图片或源文件 (可多选)</span>
                     </div>
                     <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/70 text-[10px] text-white font-mono">
                       {width} × {height} ({((sizeBytes / (1024 * 1024))).toFixed(1)} MB)
@@ -723,7 +789,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                       拖入作品 (支持多文件) 或 <span style={{ color: 'var(--accent-gold)' }} className="underline">点击上传</span>
                     </p>
                     <p className="text-xs text-neutral-400">
-                      支持 PNG, JPG, WEBP, SVG 以及 Photoshop (.psd) 和 Illustrator (.ai) 档案，可一次选择多个文件批量上传
+                      支持 MP4 视频，PNG, JPG, WEBP, GIF 图片，以及 Photoshop (.psd) 和 Illustrator (.ai) 档案，可多选批量上传
                     </p>
                   </div>
                 )}
@@ -735,7 +801,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/*,.psd,.ai"
+              accept="image/*,video/*,.mp4,.webm,.mov,.m4v,.psd,.ai"
               className="hidden"
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0) {

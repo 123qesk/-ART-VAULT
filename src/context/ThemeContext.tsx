@@ -98,6 +98,8 @@ interface ThemeContextType {
   wallpaper: WallpaperConfig;
   setWallpaper: (wallpaper: WallpaperConfig) => Promise<void>;
   removeWallpaper: () => Promise<void>;
+  autoPlayMedia: boolean;
+  setAutoPlayMedia: (enabled: boolean) => void;
   // Saved custom theme presets
   savedPresets: ThemePreset[];
   activePresetId: string | null;
@@ -112,6 +114,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_KEY = 'art_vault_theme_mode_v3';
 const THEME_PALETTES_KEY = 'art_vault_theme_palettes_v3';
 const DISPLAY_MODE_KEY = 'art_vault_display_mode_v1';
+const AUTOPLAY_MEDIA_KEY = 'art_vault_autoplay_media_v1';
 const WALLPAPER_STORAGE_KEY = 'art_vault_wallpaper_state_v1';
 const THEME_PRESETS_KEY = 'art_vault_saved_presets_v1';
 const ACTIVE_PRESET_KEY = 'art_vault_active_preset_id_v1';
@@ -267,6 +270,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setDisplayMode = (mode: DisplayMode) => {
     setDisplayModeState(mode);
     localStorage.setItem(DISPLAY_MODE_KEY, mode);
+  };
+
+  // Video & GIF autoplay management mode
+  const [autoPlayMedia, setAutoPlayMediaState] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(AUTOPLAY_MEDIA_KEY);
+        if (saved !== null) {
+          return JSON.parse(saved);
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    return true;
+  });
+
+  const setAutoPlayMedia = (enabled: boolean) => {
+    setAutoPlayMediaState(enabled);
+    localStorage.setItem(AUTOPLAY_MEDIA_KEY, JSON.stringify(enabled));
   };
 
   useEffect(() => {
@@ -492,6 +515,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         wallpaper,
         setWallpaper,
         removeWallpaper,
+        autoPlayMedia,
+        setAutoPlayMedia,
         savedPresets,
         activePresetId,
         addPreset,

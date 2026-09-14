@@ -26,6 +26,7 @@ export interface Artwork {
   sizeBytes: number;
   description: string;
   imageUrl: string; // Data URL or Blob URL or SVG
+  imageBlob?: Blob; // Raw file blob for storing large binary files in IndexedDB cleanly
   isFavorite: boolean;
   isPinned?: boolean; // Pinned to top
   fileType?: 'image' | 'gif' | 'video' | 'psd' | 'ai'; // file format: image, animated gif, video, psd, ai

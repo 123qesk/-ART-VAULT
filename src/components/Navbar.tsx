@@ -136,7 +136,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Center Search Bar (Desktop / Tablet) */}
           <div className="hidden sm:block flex-1 max-w-md mx-2 sm:mx-4">
             <div className="relative flex items-center">
-              <Search className="w-4 h-4 text-neutral-400 dark:text-neutral-500 absolute left-3 pointer-events-none" />
+              <Search 
+                className="w-4 h-4 absolute left-3 pointer-events-none transition-colors" 
+                style={{ color: searchQuery ? 'var(--accent-gold)' : 'var(--text-muted)' }}
+              />
               <input
                 id="navbar-search-input"
                 type="text"
@@ -150,15 +153,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 placeholder="搜索作品名称、标签 (#人物、#夜景)..."
                 style={{
                   backgroundColor: 'var(--search-bg)',
-                  borderColor: 'var(--card-border)',
+                  borderColor: searchQuery ? 'var(--accent-gold)' : 'var(--card-border)',
                   color: 'var(--text-main)',
+                  boxShadow: searchQuery ? '0 0 0 2px color-mix(in srgb, var(--accent-gold) 25%, transparent)' : undefined,
                 }}
-                className="w-full pl-9 pr-8 py-2 text-sm rounded-full border placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition-all"
+                className="w-full pl-9 pr-8 py-2 text-sm rounded-full border placeholder-neutral-400 focus:outline-none transition-all"
               />
               {searchQuery && (
                 <button
                   onClick={() => onSearchChange('')}
-                  className="absolute right-2.5 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1"
+                  style={{ color: 'var(--text-muted)' }}
+                  className="absolute right-2.5 text-xs p-1 hover:opacity-80 transition-opacity"
                 >
                   ✕
                 </button>
@@ -172,11 +177,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="mobile-search-toggle-btn"
               onClick={() => setShowMobileSearch(!showMobileSearch)}
-              className={`sm:hidden p-2 rounded-full border transition-all active:scale-95 ${
-                showMobileSearch || searchQuery
-                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                  : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-white border-transparent'
-              }`}
+              style={{
+                backgroundColor: (showMobileSearch || searchQuery)
+                  ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)'
+                  : 'transparent',
+                borderColor: (showMobileSearch || searchQuery)
+                  ? 'color-mix(in srgb, var(--accent-gold) 35%, transparent)'
+                  : 'transparent',
+                color: (showMobileSearch || searchQuery)
+                  ? 'var(--accent-gold)'
+                  : 'var(--text-muted)',
+              }}
+              className="sm:hidden p-2 rounded-full border transition-all active:scale-95"
               title="搜索作品"
               aria-label="搜索作品"
             >
@@ -337,7 +349,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         {showMobileSearch && (
           <div className="sm:hidden pb-3 pt-1 animate-in fade-in slide-in-from-top-2 duration-150">
             <div className="relative flex items-center">
-              <Search className="w-4 h-4 text-neutral-400 dark:text-neutral-500 absolute left-3 pointer-events-none" />
+              <Search 
+                className="w-4 h-4 absolute left-3 pointer-events-none transition-colors" 
+                style={{ color: searchQuery ? 'var(--accent-gold)' : 'var(--text-muted)' }}
+              />
               <input
                 ref={mobileSearchInputRef}
                 type="text"
@@ -351,15 +366,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 placeholder="搜索作品名称、标签 (#人物、#夜景)..."
                 style={{
                   backgroundColor: 'var(--search-bg)',
-                  borderColor: 'var(--card-border)',
+                  borderColor: searchQuery ? 'var(--accent-gold)' : 'var(--card-border)',
                   color: 'var(--text-main)',
+                  boxShadow: searchQuery ? '0 0 0 2px color-mix(in srgb, var(--accent-gold) 25%, transparent)' : undefined,
                 }}
-                className="w-full pl-9 pr-8 py-2 text-sm rounded-full border placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition-all"
+                className="w-full pl-9 pr-8 py-2 text-sm rounded-full border placeholder-neutral-400 focus:outline-none transition-all"
               />
               {searchQuery && (
                 <button
                   onClick={() => onSearchChange('')}
-                  className="absolute right-3 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1"
+                  style={{ color: 'var(--text-muted)' }}
+                  className="absolute right-3 text-xs p-1 hover:opacity-80 transition-opacity"
                 >
                   ✕
                 </button>

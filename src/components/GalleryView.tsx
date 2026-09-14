@@ -26,8 +26,12 @@ import {
   Square
 } from 'lucide-react';
 import { Artwork, GalleryLayoutMode, CategoryItem, StatusItem } from '../types';
+import { useTheme } from '../context/ThemeContext';
 import { ArtworkCard } from './ArtworkCard';
 import { CategoryManagerModal } from './CategoryManagerModal';
+
+const GALLERY_LAYOUT_KEY = 'art_vault_gallery_layout_mode_v1';
+const GALLERY_COLUMNS_KEY = 'art_vault_gallery_masonry_columns_v1';
 
 interface GalleryViewProps {
   artworks: Artwork[];
@@ -79,6 +83,7 @@ const GalleryListRow: React.FC<{
   onPermanentDelete
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const { autoPlayMedia } = useTheme();
 
   return (
     <div
@@ -92,7 +97,9 @@ const GalleryListRow: React.FC<{
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        backgroundColor: 'var(--card-bg)',
+        backgroundColor: isSelected
+          ? 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))'
+          : 'var(--card-bg)',
         borderColor: (isSelected || isHovered || art.isPinned) ? 'var(--accent-gold)' : 'var(--card-border)',
         boxShadow: isSelected
           ? '0 0 0 2px var(--accent-gold), 0 8px 24px -4px color-mix(in srgb, var(--accent-gold) 25%, transparent)'
@@ -102,19 +109,18 @@ const GalleryListRow: React.FC<{
           ? '0 0 0 1.5px var(--accent-gold)'
           : undefined,
       }}
-      className={`group relative flex flex-row items-center gap-3 sm:gap-4 p-2.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
-        isSelected ? 'bg-amber-500/5' : ''
-      }`}
+      className="group relative flex flex-row items-center gap-3 sm:gap-4 p-2.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
     >
       {/* Checkbox for Multi-select */}
       {isSelectionMode && (
         <div className="shrink-0 flex items-center justify-center pl-1">
           <div
-            className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${
-              isSelected
-                ? 'bg-amber-500 border-amber-500 text-white'
-                : 'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 text-transparent'
-            }`}
+            style={{
+              backgroundColor: isSelected ? 'var(--accent-gold)' : 'var(--bg-page)',
+              borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+              color: isSelected ? '#FFFFFF' : 'transparent',
+            }}
+            className="w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all shadow-sm"
           >
             <Check className="w-3.5 h-3.5 stroke-[3]" />
           </div>
@@ -125,12 +131,14 @@ const GalleryListRow: React.FC<{
       <div className="relative w-20 h-20 sm:w-40 sm:h-28 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
         {art.mediaType === 'video' || art.fileType === 'video' ? (
           <video
+            key={`list-vid-${autoPlayMedia}`}
             src={art.imageUrl}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             muted
-            loop
+            loop={autoPlayMedia}
             playsInline
-            autoPlay
+            autoPlay={autoPlayMedia}
+            preload="metadata"
           />
         ) : (
           <img
@@ -358,8 +366,52 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   const [selectedArtworkIds, setSelectedArtworkIds] = useState<string[]>([]);
 
   // Layout states (Requirement 3 & 4)
-  const [layoutMode, setLayoutMode] = useState<GalleryLayoutMode>('masonry'); // 'masonry' | 'list'
-  const [masonryColumns, setMasonryColumns] = useState<1 | 2 | 3 | 4>(3);
+  const [layoutMode, setLayoutModeState] = useState<GalleryLayoutMode>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(GALLERY_LAYOUT_KEY);
+        if (saved === 'list' || saved === 'masonry') {
+          return saved;
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    return 'masonry';
+  });
+
+  const setLayoutMode = (mode: GalleryLayoutMode) => {
+    setLayoutModeState(mode);
+    try {
+      localStorage.setItem(GALLERY_LAYOUT_KEY, mode);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const [masonryColumns, setMasonryColumnsState] = useState<1 | 2 | 3 | 4>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(GALLERY_COLUMNS_KEY);
+        if (saved) {
+          const num = Number(saved);
+          if (num >= 1 && num <= 4) return num as 1 | 2 | 3 | 4;
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    return 3;
+  });
+
+  const setMasonryColumns = (cols: 1 | 2 | 3 | 4) => {
+    setMasonryColumnsState(cols);
+    try {
+      localStorage.setItem(GALLERY_COLUMNS_KEY, String(cols));
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const [showMasonryDropdown, setShowMasonryDropdown] = useState(false);
   const [isMobileFilterDrawerOpen, setIsMobileFilterDrawerOpen] = useState(false);
   const masonryDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -818,11 +870,12 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   setIsMultiSelectMode((prev) => !prev);
                   setSelectedArtworkIds([]);
                 }}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                  isMultiSelectMode
-                    ? 'bg-amber-500 text-white shadow-md'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
+                style={{
+                  backgroundColor: isMultiSelectMode ? 'var(--accent-gold)' : 'var(--card-bg)',
+                  borderColor: 'var(--card-border)',
+                  color: isMultiSelectMode ? '#FFFFFF' : 'var(--text-main)',
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all shadow-xs"
                 title="多选批量处理"
               >
                 <CheckSquare className="w-3.5 h-3.5" />
@@ -922,7 +975,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           {isMultiSelectMode && (
             <div 
               style={{
-                backgroundColor: 'var(--card-bg)',
+                backgroundColor: 'var(--modal-bg)',
                 borderColor: 'var(--accent-gold)',
               }}
               className="sticky top-2 z-30 p-3 sm:p-4 rounded-2xl border-2 shadow-xl flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
@@ -936,23 +989,28 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                       setSelectedArtworkIds(filteredArtworks.map((a) => a.id));
                     }
                   }}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, var(--card-bg))',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text-main)',
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors"
                 >
                   {selectedArtworkIds.length === filteredArtworks.length && filteredArtworks.length > 0 ? (
                     <>
-                      <CheckSquare className="w-4 h-4 text-amber-500" />
-                      <span>取消全选</span>
+                      <CheckSquare className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                      <span style={{ color: 'var(--text-main)' }}>取消全选</span>
                     </>
                   ) : (
                     <>
-                      <Square className="w-4 h-4 text-neutral-400" />
-                      <span>全选 ({filteredArtworks.length})</span>
+                      <Square className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+                      <span style={{ color: 'var(--text-main)' }}>全选 ({filteredArtworks.length})</span>
                     </>
                   )}
                 </button>
 
-                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">
-                  已选择 <span className="text-amber-500 font-mono text-sm">{selectedArtworkIds.length}</span> 项
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                  已选择 <span className="font-mono text-sm" style={{ color: 'var(--accent-gold)' }}>{selectedArtworkIds.length}</span> 项
                 </span>
               </div>
 
@@ -1009,7 +1067,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                     setIsMultiSelectMode(false);
                     setSelectedArtworkIds([]);
                   }}
-                  className="px-3 py-1.5 rounded-xl text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+                  style={{ color: 'var(--text-muted)' }}
+                  className="px-3 py-1.5 rounded-xl text-xs hover:opacity-80 transition-opacity"
                 >
                   退出
                 </button>
@@ -1030,11 +1089,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                     setIsMultiSelectMode((prev) => !prev);
                     setSelectedArtworkIds([]);
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    isMultiSelectMode
-                      ? 'bg-amber-500 text-white shadow-md'
-                      : 'bg-rose-600/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white'
-                  }`}
+                  style={{
+                    backgroundColor: isMultiSelectMode ? 'var(--accent-gold)' : 'color-mix(in srgb, #e11d48 12%, transparent)',
+                    color: isMultiSelectMode ? '#FFFFFF' : '#e11d48',
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
                   <span>{isMultiSelectMode ? '取消多选' : '多选'}</span>
@@ -1054,29 +1113,81 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           {/* Active Filter Tags Bar */}
           {(searchQuery || selectedTag || dateFilter !== 'all' || statusFilter !== 'all') && (
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-neutral-400">当前筛选：</span>
+              <span style={{ color: 'var(--text-muted)' }}>当前筛选：</span>
               {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                  关键词: “{searchQuery}”
-                  <button onClick={() => onSearchChange('')}>✕</button>
+                <span 
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 40%, transparent)',
+                    color: 'var(--accent-gold)',
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-medium shadow-2xs"
+                >
+                  <span>关键词: “{searchQuery}”</span>
+                  <button 
+                    onClick={() => onSearchChange('')}
+                    className="hover:opacity-75 font-bold ml-0.5"
+                    style={{ color: 'var(--accent-gold)' }}
+                  >
+                    ✕
+                  </button>
                 </span>
               )}
               {selectedTag && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-mono">
-                  #{selectedTag}
-                  <button onClick={() => setSelectedTag('')}>✕</button>
+                <span 
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 40%, transparent)',
+                    color: 'var(--accent-gold)',
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-mono font-medium shadow-2xs"
+                >
+                  <span>#{selectedTag}</span>
+                  <button 
+                    onClick={() => setSelectedTag('')}
+                    className="hover:opacity-75 font-bold ml-0.5"
+                    style={{ color: 'var(--accent-gold)' }}
+                  >
+                    ✕
+                  </button>
                 </span>
               )}
               {dateFilter !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
-                  日期筛选
-                  <button onClick={() => setDateFilter('all')}>✕</button>
+                <span 
+                  style={{
+                    backgroundColor: 'var(--card-bg)',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text-main)',
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-2xs"
+                >
+                  <span>日期筛选</span>
+                  <button 
+                    onClick={() => setDateFilter('all')}
+                    className="hover:opacity-75 ml-0.5"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    ✕
+                  </button>
                 </span>
               )}
               {statusFilter !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
-                  状态: {statusFilter}
-                  <button onClick={() => setStatusFilter('all')}>✕</button>
+                <span 
+                  style={{
+                    backgroundColor: 'var(--card-bg)',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text-main)',
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-2xs"
+                >
+                  <span>状态: {statusFilter}</span>
+                  <button 
+                    onClick={() => setStatusFilter('all')}
+                    className="hover:opacity-75 ml-0.5"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    ✕
+                  </button>
                 </span>
               )}
             </div>
@@ -1161,7 +1272,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
           ) : (
             /* Empty State */
             <div 
-              style={{ backgroundColor: 'var(--content-bg)', borderColor: 'var(--card-border)' }}
+              style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
               className="p-12 rounded-3xl border text-center space-y-4 shadow-xs"
             >
               <div 
@@ -1174,10 +1285,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 <Folder className="w-7 h-7" style={{ color: 'var(--accent-gold)' }} />
               </div>
               <div className="space-y-1">
-                <h3 className="font-art-serif text-lg font-bold text-neutral-900 dark:text-neutral-100">
+                <h3 className="font-art-serif text-lg font-bold" style={{ color: 'var(--text-main)' }}>
                   {selectedCategory === 'trash' ? '回收站中没有任何作品' : '未找到符合条件的作品'}
                 </h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
+                <p className="text-xs max-w-sm mx-auto" style={{ color: 'var(--text-muted)' }}>
                   {selectedCategory === 'trash'
                     ? '平时删除的作品会暂存在这里，方便画师随时恢复。'
                     : '您可以清除筛选条件，或直接添加新的绘画或源文件。'}
@@ -1195,14 +1306,23 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                         setDateFilter('all');
                         onSearchChange('');
                       }}
-                      className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium hover:bg-neutral-200 transition-colors"
+                      style={{
+                        backgroundColor: 'var(--card-bg)',
+                        borderColor: 'var(--card-border)',
+                        color: 'var(--text-main)',
+                      }}
+                      className="px-4 py-2 rounded-xl border text-xs font-medium hover:opacity-80 transition-colors"
                     >
                       重置所有筛选
                     </button>
                   )}
                   <button
                     onClick={onOpenAddModal}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-semibold shadow-xs hover:scale-102 transition-all"
+                    style={{
+                      backgroundColor: 'var(--accent-gold)',
+                      color: '#FFFFFF',
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold shadow-xs hover:opacity-90 transition-all"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>添加作品</span>
