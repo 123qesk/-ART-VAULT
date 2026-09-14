@@ -1579,64 +1579,81 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="relative space-y-8 pt-0 pb-4">
-                    {/* Vertical Timeline Guide Line - Aligned to left-4 (mobile 16px) / left-5 (desktop 20px), starting exactly at first node center */}
-                    <div 
-                      className="absolute left-4 sm:left-5 top-[14px] bottom-6 w-[2px] -translate-x-1/2 rounded-full pointer-events-none"
-                      style={{
-                        background: 'linear-gradient(to bottom, var(--accent-gold), color-mix(in srgb, var(--accent-gold) 20%, transparent))',
-                      }}
-                    />
+                  <div className="relative pt-0 pb-4">
+                    {timelineGroups.map((group, groupIdx) => {
+                      const isFirst = groupIdx === 0;
+                      const isLast = groupIdx === timelineGroups.length - 1;
 
-                    {timelineGroups.map((group) => (
-                      <div key={group.title} className="relative pl-8 sm:pl-11 space-y-4">
-                        {/* Month Header Circle Node - Pure SVG concentric circles with 100% opaque solid background to prevent line bleed */}
-                        <div 
-                          className="absolute left-4 sm:left-5 -translate-x-1/2 top-0 h-7 flex items-center justify-center z-10 pointer-events-none"
-                        >
-                          <svg 
-                            viewBox="0 0 20 20" 
-                            className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0 select-none drop-shadow-xs"
-                            aria-hidden="true"
-                          >
-                            {/* Outer Ring with 100% Opaque Solid Fill (Ensures line never bleeds through inside the ring) */}
-                            <circle 
-                              cx="10" 
-                              cy="10" 
-                              r="8" 
-                              fill="var(--card-bg-raw, #ffffff)" 
-                              stroke="var(--accent-gold)" 
-                              strokeWidth="2.5" 
+                      return (
+                        <div key={group.title} className={`relative pl-8 sm:pl-11 space-y-4 ${isLast ? 'pb-2' : 'pb-8'}`}>
+                          {/* Guide Line Segment Above Circle (Connects from previous group and stops precisely at circle top edge at 5px) */}
+                          {!isFirst && (
+                            <div 
+                              className="absolute left-4 sm:left-5 top-0 h-[5px] w-[2px] -translate-x-1/2 pointer-events-none"
+                              style={{
+                                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 75%, transparent)',
+                              }}
                             />
-                            {/* Mathematically Centered Concentric Dot (100% symmetric at cx=10, cy=10) */}
-                            <circle 
-                              cx="10" 
-                              cy="10" 
-                              r="3" 
-                              fill="var(--accent-gold)" 
-                            />
-                          </svg>
-                        </div>
+                          )}
 
-                        {/* Month Header Date Display (Clean, spacious, unblocked) */}
-                        <div className="flex items-center gap-2 h-7 min-h-[28px]">
-                          <h3 
-                            className="font-art-serif text-base sm:text-lg font-bold tracking-wide"
-                            style={{ color: 'var(--text-main)' }}
-                          >
-                            {group.title}
-                          </h3>
-                          <span 
-                            className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-medium border"
+                          {/* Guide Line Segment Below Circle (Starts cleanly at circle bottom edge at 23px, runs down to next group or fades out) */}
+                          <div 
+                            className="absolute left-4 sm:left-5 top-[23px] w-[2px] -translate-x-1/2 pointer-events-none"
                             style={{
-                              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
-                              borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
-                              color: 'var(--accent-gold)',
+                              bottom: isLast ? '1rem' : '0px',
+                              background: isLast
+                                ? 'linear-gradient(to bottom, color-mix(in srgb, var(--accent-gold) 75%, transparent), color-mix(in srgb, var(--accent-gold) 15%, transparent))'
+                                : 'color-mix(in srgb, var(--accent-gold) 75%, transparent)',
                             }}
+                          />
+
+                          {/* Month Header Circle Node - Pure hollow ring (空心圆) with centered solid dot, dynamically styled with theme color */}
+                          <div 
+                            className="absolute left-4 sm:left-5 -translate-x-1/2 top-0 h-7 flex items-center justify-center z-10 pointer-events-none"
                           >
-                            {group.items.length} 件作品
-                          </span>
-                        </div>
+                            <svg 
+                              viewBox="0 0 20 20" 
+                              className="w-[18px] h-[18px] shrink-0 select-none drop-shadow-xs"
+                              aria-hidden="true"
+                            >
+                              {/* Hollow Outer Ring: Transparent/empty inside (fill="none"), theme colored stroke */}
+                              <circle 
+                                cx="10" 
+                                cy="10" 
+                                r="8" 
+                                fill="none" 
+                                stroke="var(--accent-gold)" 
+                                strokeWidth="2" 
+                              />
+                              {/* Center Solid Circle/Dot: Perfectly concentric at cx=10, cy=10, theme colored fill */}
+                              <circle 
+                                cx="10" 
+                                cy="10" 
+                                r="2.8" 
+                                fill="var(--accent-gold)" 
+                              />
+                            </svg>
+                          </div>
+
+                          {/* Month Header Date Display (Clean, spacious, unblocked) */}
+                          <div className="flex items-center gap-2 h-7 min-h-[28px]">
+                            <h3 
+                              className="font-art-serif text-base sm:text-lg font-bold tracking-wide"
+                              style={{ color: 'var(--text-main)' }}
+                            >
+                              {group.title}
+                            </h3>
+                            <span 
+                              className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-medium border"
+                              style={{
+                                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                                borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                                color: 'var(--accent-gold)',
+                              }}
+                            >
+                              {group.items.length} 件作品
+                            </span>
+                          </div>
 
                         {/* Timeline Items Mode: Waterfall Grid or List */}
                         {timelineSubLayout === 'grid' ? (
@@ -1700,7 +1717,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                           </div>
                         )}
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </div>
               )}
