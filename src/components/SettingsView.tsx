@@ -1230,17 +1230,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-bold">{style.label}</span>
-                              <span 
-                                className="text-[9px] px-1 py-0.2 rounded font-medium"
-                                style={{
-                                  backgroundColor: isSelected
-                                    ? 'color-mix(in srgb, var(--accent-gold) 20%, transparent)'
-                                    : 'color-mix(in srgb, var(--text-muted) 12%, transparent)',
-                                  color: isSelected ? 'var(--accent-gold)' : 'var(--text-muted)',
-                                }}
-                              >
-                                {style.badge}
-                              </span>
+                              {'badge' in style && Boolean((style as any).badge) && (
+                                <span 
+                                  className="text-[9px] px-1 py-0.2 rounded font-medium"
+                                  style={{
+                                    backgroundColor: isSelected
+                                      ? 'color-mix(in srgb, var(--accent-gold) 20%, transparent)'
+                                      : 'color-mix(in srgb, var(--text-muted) 12%, transparent)',
+                                    color: isSelected ? 'var(--accent-gold)' : 'var(--text-muted)',
+                                  }}
+                                >
+                                  {(style as any).badge}
+                                </span>
+                              )}
                             </div>
                             <span className="text-[10px] block font-mono opacity-50" style={{ color: 'var(--text-muted)' }}>
                               {style.enLabel}

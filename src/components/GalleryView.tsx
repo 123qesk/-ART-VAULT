@@ -364,8 +364,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('');
-  const [tagSearchQuery, setTagSearchQuery] = useState<string>('');
-  const tagScrollRef = useRef<HTMLDivElement | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [customDate, setCustomDate] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('pinned_first');
@@ -440,7 +438,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     }
   };
   const [showMasonryDropdown, setShowMasonryDropdown] = useState(false);
-  const [isMobileFilterDrawerOpen, setIsMobileFilterDrawerOpen] = useState(false);
   const masonryDropdownRef = useRef<HTMLDivElement | null>(null);
 
   // Clear selection on category change
@@ -462,18 +459,26 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   // Category & Status manager modal
   const [isManagerOpen, setIsManagerOpen] = useState(false);
 
-  // Calculate counts for categories
+  // Fast single-pass category counts calculation
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {
       all: artworks.length,
-      favorites: artworks.filter((a) => a.isFavorite).length,
+      favorites: 0,
       recent_edit: artworks.length,
       trash: deletedArtworks.length,
     };
 
     categories.forEach((cat) => {
-      counts[cat.name] = artworks.filter((a) => a.type === cat.name).length;
+      counts[cat.name] = 0;
     });
+
+    for (let i = 0; i < artworks.length; i++) {
+      const a = artworks[i];
+      if (a.isFavorite) counts.favorites++;
+      if (counts[a.type] !== undefined) {
+        counts[a.type]++;
+      }
+    }
 
     return counts;
   }, [artworks, deletedArtworks, categories]);
@@ -492,20 +497,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     });
     return Object.entries(tagCountMap).sort((a, b) => b[1] - a[1]);
   }, [artworks, deletedArtworks, selectedCategory]);
-
-  // Display tags filtered by quick search if entered
-  const displayTags = useMemo(() => {
-    if (!tagSearchQuery.trim()) return allTags;
-    const q = tagSearchQuery.trim().toLowerCase();
-    return allTags.filter(([t]) => t.toLowerCase().includes(q));
-  }, [allTags, tagSearchQuery]);
-
-  const scrollTags = (direction: 'left' | 'right') => {
-    if (tagScrollRef.current) {
-      const scrollAmount = direction === 'left' ? -220 : 220;
-      tagScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
 
   // Filter & Sort artworks
   const filteredArtworks = useMemo(() => {
@@ -545,17 +536,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     // Date filter
     if (dateFilter !== 'all') {
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
+      const todayStr = now.toISOString().slice(0, 10);
       const thisYearStr = String(now.getFullYear());
+      const sevenDaysAgoStr = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+      const thirtyDaysAgoStr = new Date(now.getTime() - 30 * 86400000).toISOString().slice(0, 10);
 
       if (dateFilter === 'today') {
         list = list.filter((a) => a.date === todayStr);
       } else if (dateFilter === '7days') {
-        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        list = list.filter((a) => new Date(a.date) >= sevenDaysAgo);
+        list = list.filter((a) => a.date >= sevenDaysAgoStr);
       } else if (dateFilter === '30days') {
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        list = list.filter((a) => new Date(a.date) >= thirtyDaysAgo);
+        list = list.filter((a) => a.date >= thirtyDaysAgoStr);
       } else if (dateFilter === 'year') {
         list = list.filter((a) => a.date.startsWith(thisYearStr));
       } else if (dateFilter === 'custom' && customDate) {
@@ -571,14 +562,14 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
       }
 
       if (sortOrder === 'oldest') {
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
+        return (a.date || '').localeCompare(b.date || '');
       } else if (sortOrder === 'title') {
         return a.title.localeCompare(b.title, 'zh-CN');
       } else if (sortOrder === 'largest') {
         return b.width * b.height - a.width * a.height;
       }
       // default newest
-      return new Date(b.date || b.updatedAt).getTime() - new Date(a.date || a.updatedAt).getTime();
+      return (b.date || b.updatedAt || '').localeCompare(a.date || a.updatedAt || '');
     });
 
     return list;
@@ -622,7 +613,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     }));
   }, [selectedArtworkIds, artworks]);
 
-  // Timeline Grouping Logic by Year & Month
+  // Timeline Grouping Logic by Year & Month (Fast slice-based parser)
   const timelineGroups = useMemo(() => {
     if (layoutMode !== 'timeline') return [];
 
@@ -630,19 +621,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
     filteredArtworks.forEach((art) => {
       let key = '未知日期';
-      if (art.date) {
-        const d = new Date(art.date);
-        if (!isNaN(d.getTime())) {
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          key = `${year}年${month}月`;
+      if (art.date && art.date.length >= 7) {
+        const y = art.date.slice(0, 4);
+        const m = art.date.slice(5, 7);
+        if (!isNaN(Number(y)) && !isNaN(Number(m))) {
+          key = `${y}年${m}月`;
         }
-      } else if (art.createdAt) {
-        const d = new Date(art.createdAt);
-        if (!isNaN(d.getTime())) {
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          key = `${year}年${month}月`;
+      } else if (art.createdAt && art.createdAt.length >= 7) {
+        const y = art.createdAt.slice(0, 4);
+        const m = art.createdAt.slice(5, 7);
+        if (!isNaN(Number(y)) && !isNaN(Number(m))) {
+          key = `${y}年${m}月`;
         }
       }
 
@@ -709,104 +698,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         onUpdateCategories={onUpdateCategories}
         onUpdateStatuses={onUpdateStatuses}
       />
-
-      {/* Mobile Horizontal Category Bar (Visible on mobile screens) */}
-      <div className="md:hidden w-full pb-2 mb-4 space-y-2">
-        <div className="flex items-center justify-between gap-2 px-1">
-          <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 font-art-serif flex items-center gap-1.5">
-            <Folder className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
-            <span>分类速选</span>
-          </span>
-          <div className="flex items-center gap-1.5">
-            {selectedTag && (
-              <span 
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono"
-                style={{
-                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
-                  color: 'var(--accent-gold)',
-                }}
-              >
-                #{selectedTag}
-                <button onClick={() => setSelectedTag('')} className="p-0.5 hover:text-rose-500">✕</button>
-              </span>
-            )}
-            <button
-              type="button"
-              id="mobile-filter-drawer-btn"
-              onClick={() => setIsMobileFilterDrawerOpen(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 active:scale-95"
-            >
-              <Filter className="w-3 h-3" style={{ color: 'var(--accent-gold)' }} />
-              <span>筛选/标签</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable category pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 px-0.5 touch-pan-x">
-          <button
-            onClick={() => { setSelectedCategory('all'); setSelectedTag(''); }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
-              selectedCategory === 'all' && !selectedTag
-                ? 'shadow-xs font-bold'
-                : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:border-amber-400'
-            }`}
-            style={{
-              backgroundColor: selectedCategory === 'all' && !selectedTag ? 'var(--accent-gold)' : undefined,
-              color: selectedCategory === 'all' && !selectedTag ? '#FFFFFF' : undefined,
-            }}
-          >
-            全部 ({categoryCounts.all})
-          </button>
-
-          <button
-            onClick={() => { setSelectedCategory('favorites'); setSelectedTag(''); }}
-            style={{
-              backgroundColor: selectedCategory === 'favorites' ? 'var(--accent-gold)' : undefined,
-              color: selectedCategory === 'favorites' ? '#FFFFFF' : undefined,
-            }}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
-              selectedCategory === 'favorites'
-                ? 'shadow-xs font-bold'
-                : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800'
-            }`}
-          >
-            <Star className={`w-3 h-3 ${selectedCategory === 'favorites' ? 'fill-white text-white' : 'fill-amber-400 text-amber-400'}`} />
-            <span>收藏 ({categoryCounts.favorites})</span>
-          </button>
-
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => { setSelectedCategory(cat.name); setSelectedTag(''); }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
-                selectedCategory === cat.name
-                  ? 'shadow-xs font-bold'
-                  : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:border-amber-400'
-              }`}
-              style={{
-                backgroundColor: selectedCategory === cat.name ? 'var(--accent-gold)' : undefined,
-                color: selectedCategory === cat.name ? '#FFFFFF' : undefined,
-              }}
-            >
-              <span>{cat.name}</span>
-              <span className="ml-1 opacity-70 font-mono text-[10px]">({categoryCounts[cat.name] || 0})</span>
-            </button>
-          ))}
-
-          <button
-            onClick={() => { setSelectedCategory('trash'); setSelectedTag(''); }}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
-              selectedCategory === 'trash'
-                ? 'bg-rose-600 text-white shadow-xs font-bold'
-                : 'bg-white dark:bg-[#181B22] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800'
-            }`}
-          >
-            <Trash2 className="w-3 h-3 text-rose-500" />
-            <span>回收站 ({categoryCounts.trash})</span>
-          </button>
-        </div>
-      </div>
 
       <div className="flex flex-col md:flex-row gap-8 items-start">
         
@@ -954,194 +845,113 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         {/* Right Main Gallery Wall */}
         <main className="flex-1 w-full min-w-0 space-y-5">
           
-          {/* Top Tag Filter Bar (作品库顶部标签栏) */}
+          {/* Horizontal Category Quick-Select Bar (分类速选 - 电脑端与移动端通用) */}
           <div 
-            id="gallery-top-tag-bar"
+            id="gallery-category-quickbar"
             style={{ 
               backgroundColor: 'var(--content-bg)', 
-              borderColor: selectedTag ? 'var(--accent-gold)' : 'var(--card-border)',
-              boxShadow: selectedTag ? '0 0 0 1px color-mix(in srgb, var(--accent-gold) 35%, transparent)' : undefined
+              borderColor: 'var(--card-border)' 
             }}
-            className="p-3 sm:p-3.5 rounded-2xl border shadow-xs transition-all space-y-2.5"
+            className="p-3 sm:p-3.5 rounded-2xl border shadow-xs space-y-2.5 transition-all"
           >
-            {/* Tag Bar Header: Title, Counts, Search, Active Tag Pill & Clear */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <div 
-                  className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
-                  style={{
-                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
-                    color: 'var(--accent-gold)'
-                  }}
-                >
-                  <Tag className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs sm:text-sm font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
-                      作品标签栏
-                    </span>
-                    <span 
-                      className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium"
-                      style={{ 
-                        backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
-                        color: 'var(--accent-gold)'
-                      }}
-                    >
-                      {allTags.length} 个标签
-                    </span>
-                  </div>
-                  <span className="text-[10px] block opacity-60" style={{ color: 'var(--text-muted)' }}>
-                    点击标签一键检索对应画作
-                  </span>
-                </div>
-              </div>
-
-              {/* Controls: Search, Active Tag Pill & Scroll Arrows */}
-              <div className="flex items-center gap-2 ml-auto">
-                {allTags.length > 6 && (
-                  <div 
-                    className="relative flex items-center rounded-lg border px-2 py-1 text-xs"
-                    style={{ backgroundColor: 'var(--search-bg)', borderColor: 'var(--card-border)' }}
-                  >
-                    <Search className="w-3 h-3 mr-1 opacity-50 shrink-0" style={{ color: 'var(--text-muted)' }} />
-                    <input
-                      type="text"
-                      placeholder="检索标签..."
-                      value={tagSearchQuery}
-                      onChange={(e) => setTagSearchQuery(e.target.value)}
-                      className="w-20 sm:w-28 text-xs bg-transparent focus:outline-none"
-                      style={{ color: 'var(--text-main)' }}
-                    />
-                    {tagSearchQuery && (
-                      <button 
-                        type="button" 
-                        onClick={() => setTagSearchQuery('')}
-                        className="p-0.5 hover:text-rose-500 cursor-pointer"
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {selectedTag && (
-                  <div className="flex items-center gap-1.5">
-                    <span 
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-mono font-bold border shadow-xs"
-                      style={{
-                        backgroundColor: 'color-mix(in srgb, var(--accent-gold) 18%, var(--card-bg))',
-                        borderColor: 'var(--accent-gold)',
-                        color: 'var(--accent-gold)'
-                      }}
-                    >
-                      <Tag className="w-2.5 h-2.5" />
-                      <span>#{selectedTag}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTag('')}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border border-rose-200 dark:border-rose-900/40"
-                      title="清除标签筛选"
-                    >
-                      <X className="w-3 h-3" />
-                      <span className="hidden sm:inline">清除</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Left/Right Scroll Arrows */}
-                <div className="hidden sm:flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => scrollTags('left')}
-                    className="p-1.5 rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                    style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
-                    title="向左滚动"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollTags('right')}
-                    className="p-1.5 rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                    style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
-                    title="向右滚动"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Horizontal Scrollable Tags Pill Container */}
-            <div 
-              ref={tagScrollRef}
-              className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 touch-pan-x"
-            >
-              {/* All Artworks Pill */}
-              <button
-                type="button"
-                onClick={() => setSelectedTag('')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-all cursor-pointer border flex items-center gap-1.5 ${
-                  !selectedTag
-                    ? 'font-bold shadow-xs'
-                    : 'hover:border-amber-500/50 opacity-80 hover:opacity-100'
-                }`}
-                style={{
-                  backgroundColor: !selectedTag ? 'var(--accent-gold)' : 'var(--card-bg)',
-                  borderColor: !selectedTag ? 'var(--accent-gold)' : 'var(--card-border)',
-                  color: !selectedTag ? '#FFFFFF' : 'var(--text-main)',
-                }}
-              >
-                <span>全部作品</span>
-                <span className={`text-[10px] font-mono ${!selectedTag ? 'text-white/80' : 'opacity-60'}`}>
-                  ({selectedCategory === 'trash' ? deletedArtworks.length : artworks.length})
+            {/* Header: Title, Active Tag Pill & Category/Status Manager Button */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
+                  <Folder className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: 'var(--accent-gold)' }} />
+                  <span>分类速选</span>
                 </span>
-              </button>
-
-              {/* Tag Pills */}
-              {displayTags.map(([tag, count]) => {
-                const isSelected = selectedTag === tag;
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setSelectedTag(isSelected ? '' : tag)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono shrink-0 transition-all cursor-pointer border ${
-                      isSelected
-                        ? 'font-bold shadow-sm ring-2 scale-[1.02]'
-                        : 'hover:border-amber-500/50 hover:scale-[1.02]'
-                    }`}
+                {selectedTag && (
+                  <span 
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono"
                     style={{
-                      backgroundColor: isSelected ? 'var(--accent-gold)' : 'var(--card-bg)',
-                      borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
-                      color: isSelected ? '#FFFFFF' : 'var(--text-main)',
-                      ringColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 35%, transparent)' : undefined,
+                      backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                      color: 'var(--accent-gold)',
                     }}
                   >
-                    <span>#{tag}</span>
-                    <span className={`text-[10px] ${isSelected ? 'text-white/85' : 'opacity-60'}`}>
-                      ({count})
-                    </span>
-                    {isSelected && (
-                      <X className="w-3 h-3 ml-0.5 hover:scale-125 transition-transform" />
-                    )}
-                  </button>
-                );
-              })}
+                    #{selectedTag}
+                    <button onClick={() => setSelectedTag('')} className="p-0.5 hover:text-rose-500 cursor-pointer">✕</button>
+                  </span>
+                )}
+              </div>
 
-              {allTags.length === 0 && (
-                <span className="text-xs py-1 px-2" style={{ color: 'var(--text-muted)' }}>
-                  暂无作品标签。在添加或编辑作品时填写标签，便可在此处一键检索。
-                </span>
-              )}
+              {/* Management button: 只留下“管理作品分类与状态” */}
+              <button
+                type="button"
+                id="gallery-category-manager-btn"
+                onClick={() => setIsManagerOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 border cursor-pointer hover:border-amber-500/50"
+                style={{
+                  backgroundColor: 'var(--search-bg)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text-main)',
+                }}
+                title="管理自定义分类与状态"
+              >
+                <Settings2 className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
+                <span>管理作品分类与状态</span>
+              </button>
+            </div>
 
-              {allTags.length > 0 && displayTags.length === 0 && (
-                <span className="text-xs py-1 px-2" style={{ color: 'var(--text-muted)' }}>
-                  未找到包含 "{tagSearchQuery}" 的标签
-                </span>
-              )}
+            {/* Scrollable category pills (回收站已按要求移出) */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5 touch-pan-x">
+              <button
+                type="button"
+                onClick={() => { setSelectedCategory('all'); setSelectedTag(''); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                  selectedCategory === 'all' && !selectedTag
+                    ? 'shadow-xs font-bold'
+                    : 'border hover:border-amber-400'
+                }`}
+                style={{
+                  backgroundColor: selectedCategory === 'all' && !selectedTag ? 'var(--accent-gold)' : 'var(--card-bg)',
+                  borderColor: selectedCategory === 'all' && !selectedTag ? 'var(--accent-gold)' : 'var(--card-border)',
+                  color: selectedCategory === 'all' && !selectedTag ? '#FFFFFF' : 'var(--text-main)',
+                }}
+              >
+                全部 ({categoryCounts.all})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setSelectedCategory('favorites'); setSelectedTag(''); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                  selectedCategory === 'favorites'
+                    ? 'shadow-xs font-bold'
+                    : 'border hover:border-amber-400'
+                }`}
+                style={{
+                  backgroundColor: selectedCategory === 'favorites' ? 'var(--accent-gold)' : 'var(--card-bg)',
+                  borderColor: selectedCategory === 'favorites' ? 'var(--accent-gold)' : 'var(--card-border)',
+                  color: selectedCategory === 'favorites' ? '#FFFFFF' : 'var(--text-main)',
+                }}
+              >
+                <Star className={`w-3.5 h-3.5 ${selectedCategory === 'favorites' ? 'fill-white text-white' : 'fill-amber-400 text-amber-400'}`} />
+                <span>收藏 ({categoryCounts.favorites})</span>
+              </button>
+
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => { setSelectedCategory(cat.name); setSelectedTag(''); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                    selectedCategory === cat.name
+                      ? 'shadow-xs font-bold'
+                      : 'border hover:border-amber-400'
+                  }`}
+                  style={{
+                    backgroundColor: selectedCategory === cat.name ? 'var(--accent-gold)' : 'var(--card-bg)',
+                    borderColor: selectedCategory === cat.name ? 'var(--accent-gold)' : 'var(--card-border)',
+                    color: selectedCategory === cat.name ? '#FFFFFF' : 'var(--text-main)',
+                  }}
+                >
+                  <span>{cat.name}</span>
+                  <span className={`ml-1 font-mono text-[10px] ${selectedCategory === cat.name ? 'opacity-85' : 'opacity-60'}`}>
+                    ({categoryCounts[cat.name] || 0})
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
           
@@ -1245,7 +1055,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   borderColor: 'var(--card-border)',
                   color: isMultiSelectMode ? '#FFFFFF' : 'var(--text-main)',
                 }}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all shadow-xs"
+                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all shadow-xs cursor-pointer active:scale-95"
                 title="多选批量处理"
               >
                 <CheckSquare className="w-3.5 h-3.5" />
@@ -1356,6 +1166,50 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Mobile-Only Trash Quick Entrance: 在作品布局的右侧, PC端去掉 (md:hidden) */}
+              <button
+                id="btn-mobile-toolbar-trash"
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(selectedCategory === 'trash' ? 'all' : 'trash');
+                  setSelectedTag('');
+                }}
+                style={{
+                  backgroundColor: selectedCategory === 'trash'
+                    ? '#e11d48'
+                    : (categoryCounts.trash > 0 ? 'color-mix(in srgb, #f43f5e 10%, var(--card-bg))' : 'var(--card-bg)'),
+                  borderColor: selectedCategory === 'trash'
+                    ? '#e11d48'
+                    : (categoryCounts.trash > 0 ? 'color-mix(in srgb, #f43f5e 35%, var(--card-border))' : 'var(--card-border)'),
+                  color: selectedCategory === 'trash'
+                    ? '#FFFFFF'
+                    : (categoryCounts.trash > 0 ? '#e11d48' : 'var(--text-main)'),
+                }}
+                className={`md:hidden px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer shadow-xs active:scale-95 ${
+                  selectedCategory === 'trash'
+                    ? 'shadow-rose-500/25 font-bold'
+                    : 'hover:border-rose-400 dark:hover:border-rose-700'
+                }`}
+                title={selectedCategory === 'trash' ? '退出回收站并返回全部' : `回收站 (${categoryCounts.trash} 件作品)`}
+              >
+                <Trash2 
+                  className="w-3.5 h-3.5 shrink-0" 
+                  style={{ color: selectedCategory === 'trash' ? '#FFFFFF' : '#f43f5e' }} 
+                />
+                <span className="whitespace-nowrap">
+                  {selectedCategory === 'trash' ? '已在回收站' : '回收站'}
+                </span>
+                <span 
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                    selectedCategory === 'trash' 
+                      ? 'bg-white/25 text-white' 
+                      : (categoryCounts.trash > 0 ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' : 'opacity-60')
+                  }`}
+                >
+                  {categoryCounts.trash}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -1687,78 +1541,101 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-800 border" style={{ borderColor: 'var(--card-border)' }}>
+                    <div 
+                      className="flex items-center gap-1 p-1 rounded-xl border shadow-2xs" 
+                      style={{ 
+                        backgroundColor: 'var(--search-bg)', 
+                        borderColor: 'var(--card-border)' 
+                      }}
+                    >
                       <button
+                        type="button"
                         onClick={() => setTimelineSubLayout('grid')}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                          timelineSubLayout === 'grid'
-                            ? 'bg-white dark:bg-neutral-700 text-amber-600 dark:text-amber-400 shadow-2xs font-bold'
-                            : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
-                        }`}
-                        title="时间轴瀑布流/网格平铺"
+                        style={{
+                          backgroundColor: timelineSubLayout === 'grid' ? 'var(--card-bg)' : 'transparent',
+                          color: timelineSubLayout === 'grid' ? 'var(--accent-gold)' : 'var(--text-muted)',
+                          boxShadow: timelineSubLayout === 'grid' ? '0 1px 3px rgba(0,0,0,0.08)' : undefined,
+                        }}
+                        className="p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer hover:opacity-100 active:scale-95"
+                        title="瀑布流排版"
+                        aria-label="瀑布流排版"
                       >
-                        <LayoutGrid className="w-3.5 h-3.5" />
-                        <span>瀑布流</span>
+                        <LayoutGrid className="w-4 h-4" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => setTimelineSubLayout('list')}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                          timelineSubLayout === 'list'
-                            ? 'bg-white dark:bg-neutral-700 text-amber-600 dark:text-amber-400 shadow-2xs font-bold'
-                            : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
-                        }`}
-                        title="时间轴极简纵向列表"
+                        style={{
+                          backgroundColor: timelineSubLayout === 'list' ? 'var(--card-bg)' : 'transparent',
+                          color: timelineSubLayout === 'list' ? 'var(--accent-gold)' : 'var(--text-muted)',
+                          boxShadow: timelineSubLayout === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : undefined,
+                        }}
+                        className="p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer hover:opacity-100 active:scale-95"
+                        title="列表排版"
+                        aria-label="列表排版"
                       >
-                        <List className="w-3.5 h-3.5" />
-                        <span>列表</span>
+                        <List className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="relative pl-5 sm:pl-8 space-y-8 py-2">
-                    {/* Vertical Timeline Guide Line */}
+                  <div className="relative space-y-8 pt-0 pb-4">
+                    {/* Vertical Timeline Guide Line - Aligned to left-4 (mobile 16px) / left-5 (desktop 20px), starting exactly at first node center */}
                     <div 
-                      className="absolute left-2.5 sm:left-4 top-4 bottom-4 w-0.5 rounded-full"
+                      className="absolute left-4 sm:left-5 top-[14px] bottom-6 w-[2px] -translate-x-1/2 rounded-full pointer-events-none"
                       style={{
                         background: 'linear-gradient(to bottom, var(--accent-gold), color-mix(in srgb, var(--accent-gold) 20%, transparent))',
                       }}
                     />
 
                     {timelineGroups.map((group) => (
-                      <div key={group.title} className="relative space-y-4">
-                        {/* Month Header Node */}
-                        <div className="flex items-center gap-3 relative z-10">
-                          <div 
-                            className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 -ml-[23px] sm:-ml-[30px] shadow-xs"
+                      <div key={group.title} className="relative pl-8 sm:pl-11 space-y-4">
+                        {/* Month Header Circle Node - Pure SVG concentric circles with 100% opaque solid background to prevent line bleed */}
+                        <div 
+                          className="absolute left-4 sm:left-5 -translate-x-1/2 top-0 h-7 flex items-center justify-center z-10 pointer-events-none"
+                        >
+                          <svg 
+                            viewBox="0 0 20 20" 
+                            className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0 select-none drop-shadow-xs"
+                            aria-hidden="true"
+                          >
+                            {/* Outer Ring with 100% Opaque Solid Fill (Ensures line never bleeds through inside the ring) */}
+                            <circle 
+                              cx="10" 
+                              cy="10" 
+                              r="8" 
+                              fill="var(--card-bg-raw, #ffffff)" 
+                              stroke="var(--accent-gold)" 
+                              strokeWidth="2.5" 
+                            />
+                            {/* Mathematically Centered Concentric Dot (100% symmetric at cx=10, cy=10) */}
+                            <circle 
+                              cx="10" 
+                              cy="10" 
+                              r="3" 
+                              fill="var(--accent-gold)" 
+                            />
+                          </svg>
+                        </div>
+
+                        {/* Month Header Date Display (Clean, spacious, unblocked) */}
+                        <div className="flex items-center gap-2 h-7 min-h-[28px]">
+                          <h3 
+                            className="font-art-serif text-base sm:text-lg font-bold tracking-wide"
+                            style={{ color: 'var(--text-main)' }}
+                          >
+                            {group.title}
+                          </h3>
+                          <span 
+                            className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-medium border"
                             style={{
-                              backgroundColor: 'var(--card-bg)',
-                              borderColor: 'var(--accent-gold)',
+                              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                              borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                              color: 'var(--accent-gold)',
                             }}
                           >
-                            <div 
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: 'var(--accent-gold)' }}
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <h3 
-                              className="font-art-serif text-base sm:text-lg font-bold tracking-wide"
-                              style={{ color: 'var(--text-main)' }}
-                            >
-                              {group.title}
-                            </h3>
-                            <span 
-                              className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-medium border"
-                              style={{
-                                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
-                                borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
-                                color: 'var(--accent-gold)',
-                              }}
-                            >
-                              {group.items.length} 件作品
-                            </span>
-                          </div>
+                            {group.items.length} 件作品
+                          </span>
                         </div>
 
                         {/* Timeline Items Mode: Waterfall Grid or List */}
@@ -1893,113 +1770,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
         </main>
       </div>
-
-      {/* Mobile Filter & Tags Drawer Bottom Sheet */}
-      {isMobileFilterDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div 
-            style={{
-              backgroundColor: 'var(--modal-bg)',
-              borderColor: 'var(--card-border)',
-            }}
-            className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl border shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
-          >
-            {/* Drawer Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-                <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100">
-                  筛选与标签
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsMobileFilterDrawerOpen(false)}
-                className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Manage Categories and Statuses Button */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsMobileFilterDrawerOpen(false);
-                setIsManagerOpen(true);
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 text-xs font-medium text-neutral-800 dark:text-neutral-200 transition-colors"
-            >
-              <Settings2 className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-              <span>管理作品分类与状态 </span>
-            </button>
-
-            {/* Tag Cloud in Mobile Drawer */}
-            {allTags.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-neutral-500">热门标签</span>
-                  {selectedTag && (
-                    <button
-                      onClick={() => setSelectedTag('')}
-                      className="text-xs text-amber-600 dark:text-amber-400 hover:underline"
-                    >
-                      清除当前标签
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-1">
-                  {allTags.map(([tag, count]) => {
-                    const isSelected = selectedTag === tag;
-                    return (
-                      <button
-                        key={tag}
-                        onClick={() => {
-                          setSelectedTag(isSelected ? '' : tag);
-                          setIsMobileFilterDrawerOpen(false);
-                        }}
-                        className={`text-xs px-3 py-1.5 rounded-full font-mono transition-colors active:scale-95 ${
-                          isSelected
-                            ? 'bg-amber-600 text-white font-semibold'
-                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
-                        }`}
-                      >
-                        #{tag} <span className="opacity-60 text-[10px]">({count})</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Quick Actions Footer */}
-            <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCategory('all');
-                  setStatusFilter('all');
-                  setSelectedTag('');
-                  setDateFilter('all');
-                  onSearchChange('');
-                  setIsMobileFilterDrawerOpen(false);
-                }}
-                className="px-4 py-2 text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
-              >
-                重置所有筛选
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsMobileFilterDrawerOpen(false)}
-                style={{ backgroundColor: 'var(--accent-gold)' }}
-                className="px-5 py-2 rounded-xl text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
-              >
-                完成
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Batch Tag Edit Modal */}
       {isBatchTagModalOpen && (
