@@ -17,7 +17,11 @@ import {
   FileText,
   RotateCcw,
   BookPlus,
-  Pin
+  Pin,
+  Pipette,
+  Copy,
+  Plus,
+  Check
 } from 'lucide-react';
 import { Artwork, DiaryEntry } from '../types';
 
@@ -32,6 +36,7 @@ interface ArtworkDetailModalProps {
   onEdit: (artwork: Artwork) => void;
   onDelete: (id: string) => void;
   onAddDiaryForArtwork: (artwork: Artwork) => void;
+  onUpdateArtwork?: (artwork: Artwork) => void;
 }
 
 export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
@@ -45,6 +50,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
   onEdit,
   onDelete,
   onAddDiaryForArtwork,
+  onUpdateArtwork,
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -52,6 +58,10 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Color Palette state
+  const [newColorHex, setNewColorHex] = useState('#E63946');
+  const [copiedColorHex, setCopiedColorHex] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -90,6 +100,34 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
 
   const goToNext = () => {
     if (nextArtwork) onSelectArtwork(nextArtwork);
+  };
+
+  // Color Palette handlers
+  const handleAddColor = () => {
+    let hex = newColorHex.trim();
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
+
+    const currentList = artwork?.colorPalette || [];
+    const upperHex = hex.toUpperCase();
+    if (currentList.includes(upperHex)) return;
+
+    const updatedPalette = [...currentList, upperHex];
+    if (artwork) {
+      onUpdateArtwork?.({ ...artwork, colorPalette: updatedPalette });
+    }
+  };
+
+  const handleRemoveColor = (colorToRemove: string) => {
+    if (!artwork) return;
+    const updatedPalette = (artwork.colorPalette || []).filter((c) => c !== colorToRemove);
+    onUpdateArtwork?.({ ...artwork, colorPalette: updatedPalette });
+  };
+
+  const handleCopyColor = (hex: string) => {
+    navigator.clipboard.writeText(hex);
+    setCopiedColorHex(hex);
+    setTimeout(() => setCopiedColorHex(null), 2000);
   };
 
   // Zoom handlers
@@ -377,6 +415,88 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
               <span className="font-mono text-neutral-200 mt-0.5 block">
                 {(artwork.sizeBytes / (1024 * 1024)).toFixed(2)} MB
               </span>
+            </div>
+          </div>
+
+          {/* Color Palette Section */}
+          <div className="space-y-2.5 pt-1">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Pipette className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
+                作品配色色卡 ({(artwork.colorPalette || []).length})
+              </h4>
+              {copiedColorHex && (
+                <span className="text-[11px] font-mono font-medium text-emerald-400 flex items-center gap-1 animate-in fade-in duration-150">
+                  <Check className="w-3 h-3" /> 已复制 {copiedColorHex}
+                </span>
+              )}
+            </div>
+
+            {/* Swatches Grid */}
+            <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-neutral-900/60 border border-neutral-800">
+              {(artwork.colorPalette || []).length > 0 ? (
+                (artwork.colorPalette || []).map((hex, idx) => (
+                  <div
+                    key={idx}
+                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 hover:border-amber-500/60 transition-all shadow-xs cursor-pointer"
+                    onClick={() => handleCopyColor(hex)}
+                    title={`点击复制色值 ${hex}`}
+                  >
+                    <span
+                      className="w-4 h-4 rounded-full border border-black/20 shadow-inner shrink-0"
+                      style={{ backgroundColor: hex }}
+                    />
+                    <span className="text-xs font-mono text-neutral-200 uppercase font-medium">{hex}</span>
+                    
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveColor(hex);
+                      }}
+                      className="p-0.5 rounded-full text-neutral-500 hover:text-rose-400 hover:bg-neutral-800 transition-colors ml-0.5"
+                      title="删除此色卡"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-neutral-500 py-1 font-light italic">
+                  尚未添加配色色卡，可通过下方选择颜色并添加
+                </div>
+              )}
+            </div>
+
+            {/* Add Color Controls */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center gap-1.5 p-1 px-2 rounded-xl bg-neutral-900/80 border border-neutral-800 flex-1">
+                <input
+                  type="color"
+                  value={newColorHex}
+                  onChange={(e) => setNewColorHex(e.target.value)}
+                  className="w-6 h-6 rounded-lg border-0 bg-transparent cursor-pointer p-0 shrink-0"
+                  title="拾色器选择颜色"
+                />
+                <input
+                  type="text"
+                  value={newColorHex}
+                  onChange={(e) => setNewColorHex(e.target.value)}
+                  placeholder="#E63946"
+                  maxLength={7}
+                  className="w-full text-xs font-mono bg-transparent text-neutral-200 placeholder-neutral-600 focus:outline-none uppercase"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddColor}
+                style={{ backgroundColor: 'var(--accent-gold)' }}
+                className="px-3 py-2 rounded-xl text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all flex items-center gap-1 shadow-xs cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>添加色卡</span>
+              </button>
             </div>
           </div>
 

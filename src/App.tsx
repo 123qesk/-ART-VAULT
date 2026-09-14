@@ -100,6 +100,14 @@ export default function App() {
     showToast(existingId ? `已更新作品《${savedItem.title}》` : `已存入画匣《${savedItem.title}》`);
   };
 
+  // Update artwork directly (e.g. color palette updates)
+  const handleUpdateArtwork = async (art: Artwork) => {
+    await vaultDB.saveArtwork(art);
+    setSelectedArtworkDetail(art);
+    await refreshData();
+    showToast(`已保存《${art.title}》配色色卡`);
+  };
+
   // Toggle favorite
   const handleToggleFavorite = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -400,6 +408,7 @@ export default function App() {
           }}
           onDelete={handleSoftDeleteArtwork}
           onAddDiaryForArtwork={handleAddDiaryForArtwork}
+          onUpdateArtwork={handleUpdateArtwork}
         />
 
         {/* Toast Notification Pill */}

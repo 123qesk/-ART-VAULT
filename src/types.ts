@@ -33,6 +33,7 @@ export interface Artwork {
   previewScale?: number; // scale percentage, e.g. 100 for 100%
   isDeleted?: boolean;
   deletedAt?: string;
+  colorPalette?: string[]; // Custom color palette swatches (e.g. ['#FF5733', '#2E4057'])
   createdAt: string;
   updatedAt: string;
 }
@@ -103,4 +104,13 @@ export interface CustomThemeColors {
   badgeOpacity?: number;     // 标签胶囊与徽章透明度
   // Custom wallpaper config
   wallpaper?: WallpaperConfig;
+}
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  themeMode: ThemeMode;
+  colors: CustomThemeColors;
+  showInHeader: boolean; // 是否在右上角“画室主题外观”菜单中可选择
+  createdAt: string;
 }

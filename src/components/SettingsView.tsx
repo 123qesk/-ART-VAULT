@@ -20,7 +20,9 @@ import {
   Trash2,
   Layers,
   SlidersHorizontal,
-  Maximize2
+  Maximize2,
+  BookmarkPlus,
+  Edit3
 } from 'lucide-react';
 import { ThemeMode, CustomThemeColors, DisplayMode, WallpaperConfig } from '../types';
 import { useTheme, BUILTIN_THEMES_DEFAULT } from '../context/ThemeContext';
@@ -154,11 +156,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     wallpaper,
     setWallpaper,
     removeWallpaper,
+    savedPresets,
+    activePresetId,
+    addPreset,
+    updatePreset,
+    deletePreset,
+    applyPreset,
   } = useTheme();
 
   const [importStatus, setImportStatus] = useState<string>('');
   const [wallpaperUploadStatus, setWallpaperUploadStatus] = useState<string>('');
   const [isResetConfirming, setIsResetConfirming] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [showInHeaderInput, setShowInHeaderInput] = useState(true);
+  const [presetToast, setPresetToast] = useState<string | null>(null);
+  const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+  const [editingPresetName, setEditingPresetName] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const wallpaperInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1064,6 +1077,246 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             >
               强调色按钮
             </span>
+          </div>
+
+          {/* Custom Theme Presets Management (Requirement 2 & 3) */}
+          <div 
+            id="theme-presets-management"
+            className="p-5 rounded-2xl border space-y-4 animate-in fade-in"
+            style={{
+              backgroundColor: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+            }}
+          >
+            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--card-border)' }}>
+              <div>
+                <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                  <BookmarkPlus className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                  <span>自定义主题预设储存与管理</span>
+                </h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  在调整好主题色彩与风格后，您可以给它命名并储存起来；亦可选择是否将其同步至右上角“画室主题外观”下拉菜单。
+                </p>
+              </div>
+              {presetToast && (
+                <span className="text-xs font-semibold text-emerald-500 animate-in fade-in duration-200">
+                  {presetToast}
+                </span>
+              )}
+            </div>
+
+            {/* Form to Save Current Theme as Preset */}
+            <div 
+              className="p-4 rounded-xl border space-y-3"
+              style={{
+                backgroundColor: 'var(--bg-page)',
+                borderColor: 'var(--card-border)',
+              }}
+            >
+              <span className="text-xs font-bold block" style={{ color: 'var(--text-main)' }}>
+                储存当前外观配置为新预设
+              </span>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <input
+                  type="text"
+                  value={presetName}
+                  onChange={(e) => setPresetName(e.target.value)}
+                  placeholder="例：羊皮纸暖黄、极简深灰、夜色赛博..."
+                  className="flex-1 px-3 py-2 text-xs rounded-xl border focus:outline-none transition-colors"
+                  style={{
+                    backgroundColor: 'var(--card-bg)',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text-main)',
+                  }}
+                />
+
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs shrink-0" style={{ color: 'var(--text-main)' }}>
+                  <input
+                    type="checkbox"
+                    checked={showInHeaderInput}
+                    onChange={(e) => setShowInHeaderInput(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                  />
+                  <span>在右上角“画室主题外观”中显示</span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!presetName.trim()) return;
+                    addPreset(presetName.trim(), showInHeaderInput);
+                    setPresetToast(`已成功保存预设《${presetName.trim()}》`);
+                    setPresetName('');
+                    setTimeout(() => setPresetToast(null), 3000);
+                  }}
+                  disabled={!presetName.trim()}
+                  style={{
+                    backgroundColor: 'var(--accent-gold)',
+                    opacity: presetName.trim() ? 1 : 0.5,
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  <BookmarkPlus className="w-3.5 h-3.5" />
+                  <span>储存为新预设</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Saved Presets List */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                  主题预设 ({savedPresets.length})
+                </span>
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                  可随时在设置中增加、重命名或删去主题，勾选可同步至右上角外观菜单
+                </span>
+              </div>
+
+              {savedPresets.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {savedPresets.map((preset) => {
+                    const isActive = activePresetId === preset.id;
+                    const isEditing = editingPresetId === preset.id;
+
+                    return (
+                      <div
+                        key={preset.id}
+                        className="p-3.5 rounded-2xl border space-y-3 transition-all relative"
+                        style={{
+                          backgroundColor: 'var(--bg-page)',
+                          borderColor: isActive ? 'var(--accent-gold)' : 'var(--card-border)',
+                          boxShadow: isActive ? '0 0 0 1px var(--accent-gold)' : undefined,
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          {isEditing ? (
+                            <div className="flex items-center gap-1.5 flex-1">
+                              <input
+                                type="text"
+                                value={editingPresetName}
+                                onChange={(e) => setEditingPresetName(e.target.value)}
+                                className="px-2.5 py-1 text-xs rounded-lg border focus:outline-none w-full"
+                                style={{
+                                  backgroundColor: 'var(--card-bg)',
+                                  borderColor: 'var(--card-border)',
+                                  color: 'var(--text-main)',
+                                }}
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => {
+                                  if (editingPresetName.trim()) {
+                                    updatePreset(preset.id, { name: editingPresetName.trim() });
+                                  }
+                                  setEditingPresetId(null);
+                                }}
+                                className="p-1 rounded-lg bg-amber-500 text-white text-xs font-medium shrink-0 cursor-pointer"
+                                title="确认保存重命名"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <h4 className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                                {preset.name}
+                              </h4>
+                              <button
+                                onClick={() => {
+                                  setEditingPresetId(preset.id);
+                                  setEditingPresetName(preset.name);
+                                }}
+                                className="text-neutral-400 hover:text-amber-500 p-0.5 cursor-pointer"
+                                title="重命名预设"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                              {isActive && (
+                                <span 
+                                  className="text-[10px] px-1.5 py-0.2 rounded border font-medium shrink-0"
+                                  style={{
+                                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                                    borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                                    color: 'var(--accent-gold)',
+                                  }}
+                                >
+                                  当前在用
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Swatches preview */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs"
+                              style={{ backgroundColor: preset.colors.bgPage }}
+                              title="背景色"
+                            />
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs"
+                              style={{ backgroundColor: preset.colors.cardBg }}
+                              title="卡片色"
+                            />
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs"
+                              style={{ backgroundColor: preset.colors.accentColor }}
+                              title="强调色"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Options & Actions row */}
+                        <div className="flex items-center justify-between pt-2 border-t text-[11px]" style={{ borderColor: 'var(--card-border)' }}>
+                          <label className="flex items-center gap-1.5 cursor-pointer select-none" style={{ color: 'var(--text-muted)' }}>
+                            <input
+                              type="checkbox"
+                              checked={preset.showInHeader}
+                              onChange={(e) => updatePreset(preset.id, { showInHeader: e.target.checked })}
+                              className="w-3.5 h-3.5 rounded border-neutral-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                            />
+                            <span>在右上角外观中显示</span>
+                          </label>
+
+                          <div className="flex items-center gap-2">
+                            {!isActive && (
+                              <button
+                                type="button"
+                                onClick={() => applyPreset(preset)}
+                                style={{ color: 'var(--accent-gold)' }}
+                                className="font-medium hover:underline cursor-pointer"
+                              >
+                                应用预设
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => deletePreset(preset.id)}
+                              className="text-neutral-400 hover:text-rose-500 cursor-pointer p-0.5"
+                              title="删除预设"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div 
+                  className="p-4 rounded-xl border border-dashed text-center text-xs font-light"
+                  style={{
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  尚未储存任何主题预设。微调上方色彩后，输入名称即可一键储存！
+                </div>
+              )}
+            </div>
           </div>
 
         </div>

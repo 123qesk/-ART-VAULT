@@ -42,11 +42,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddModal,
   artworksCount,
 }) => {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, savedPresets, applyPreset, activePresetId } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement | null>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const headerPresets = (savedPresets || []).filter((p) => p && p.showInHeader);
+  const activePreset = activePresetId ? savedPresets?.find((p) => p.id === activePresetId) : null;
+  const currentThemeLabel = activePreset
+    ? activePreset.name
+    : THEME_OPTIONS.find((t) => t.id === theme)?.name || '主题外观';
 
   useEffect(() => {
     if (showMobileSearch && mobileSearchInputRef.current) {
@@ -204,7 +210,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Palette className="w-4 h-4 transition-colors" style={{ color: 'var(--accent-gold)' }} />
                 <span className="hidden sm:inline">
-                  {THEME_OPTIONS.find((t) => t.id === theme)?.name || '主题外观'}
+                  {currentThemeLabel}
                 </span>
                 <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform ${showThemeMenu ? 'rotate-180' : ''}`} />
               </button>
@@ -215,7 +221,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     backgroundColor: 'var(--card-bg)',
                     borderColor: 'var(--card-border)',
                   }}
-                  className="absolute right-0 mt-2 w-48 rounded-2xl border shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute right-0 mt-2 w-52 rounded-2xl border shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[80vh] overflow-y-auto"
                 >
                   <div 
                     style={{
@@ -228,7 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                   <div className="py-1 space-y-0.5">
                     {THEME_OPTIONS.map((opt) => {
-                      const isSelected = theme === opt.id || (opt.id === 'ivory' && theme === 'light');
+                      const isSelected = !activePreset && (theme === opt.id || (opt.id === 'ivory' && theme === 'light'));
                       return (
                         <button
                           key={opt.id}
@@ -260,6 +266,55 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </button>
                       );
                     })}
+
+                    {/* Custom Saved Theme Presets Header & Items */}
+                    {headerPresets.length > 0 && (
+                      <>
+                        <div 
+                          style={{
+                            borderColor: 'var(--card-border)',
+                            color: 'var(--text-muted)',
+                          }}
+                          className="px-2.5 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider border-t mt-1.5"
+                        >
+                          自定义主题预设
+                        </div>
+
+                        {headerPresets.map((preset) => {
+                          if (!preset || !preset.id) return null;
+                          const isSelected = activePresetId === preset.id;
+                          const dotBg = preset.colors?.accentColor || 'var(--accent-gold)';
+                          return (
+                            <button
+                              key={preset.id}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                applyPreset(preset);
+                                setShowThemeMenu(false);
+                              }}
+                              style={{
+                                color: isSelected ? 'var(--accent-gold)' : 'var(--text-main)',
+                              }}
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors ${
+                                isSelected
+                                  ? 'bg-amber-500/10 font-semibold'
+                                  : 'hover:bg-black/5 dark:hover:bg-white/5'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0 border border-black/20"
+                                  style={{ backgroundColor: dotBg }}
+                                />
+                                <span className="truncate max-w-[100px]">{preset.name || '自定义预设'}</span>
+                              </div>
+                              {isSelected && <Check className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--accent-gold)' }} />}
+                            </button>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                 </div>
               )}

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ThemeMode, CustomThemeColors, DisplayMode, WallpaperConfig } from '../types';
+import { ThemeMode, CustomThemeColors, DisplayMode, WallpaperConfig, ThemePreset } from '../types';
 import { vaultDB } from '../services/db';
 
 export const BUILTIN_THEMES_DEFAULT: Record<ThemeMode, CustomThemeColors> = {
@@ -98,6 +98,13 @@ interface ThemeContextType {
   wallpaper: WallpaperConfig;
   setWallpaper: (wallpaper: WallpaperConfig) => Promise<void>;
   removeWallpaper: () => Promise<void>;
+  // Saved custom theme presets
+  savedPresets: ThemePreset[];
+  activePresetId: string | null;
+  addPreset: (name: string, showInHeader?: boolean) => ThemePreset;
+  updatePreset: (id: string, updates: Partial<ThemePreset>) => void;
+  deletePreset: (id: string) => void;
+  applyPreset: (preset: ThemePreset) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -106,6 +113,8 @@ const THEME_KEY = 'art_vault_theme_mode_v3';
 const THEME_PALETTES_KEY = 'art_vault_theme_palettes_v3';
 const DISPLAY_MODE_KEY = 'art_vault_display_mode_v1';
 const WALLPAPER_STORAGE_KEY = 'art_vault_wallpaper_state_v1';
+const THEME_PRESETS_KEY = 'art_vault_saved_presets_v1';
+const ACTIVE_PRESET_KEY = 'art_vault_active_preset_id_v1';
 
 const DEFAULT_WALLPAPER: WallpaperConfig = {
   type: 'none',
@@ -142,6 +151,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
     return {};
+  });
+
+  // Saved theme presets state
+  const [savedPresets, setSavedPresets] = useState<ThemePreset[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(THEME_PRESETS_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [];
+  });
+
+  const [activePresetId, setActivePresetId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(ACTIVE_PRESET_KEY);
+    }
+    return null;
   });
 
   // Wallpaper state
@@ -181,17 +210,30 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const setWallpaper = async (newWp: WallpaperConfig) => {
-    setWallpaperState(newWp);
+    if (!newWp) return;
+    const url = newWp.url || '';
+    const safeWp: WallpaperConfig = {
+      type: newWp.type || (url ? 'image' : 'none'),
+      url: url,
+      opacity: typeof newWp.opacity === 'number' ? newWp.opacity : 85,
+      blur: typeof newWp.blur === 'number' ? newWp.blur : 0,
+      fit: newWp.fit || 'cover',
+    };
+    setWallpaperState(safeWp);
     try {
-      if (newWp.url.length < 500000) {
-        localStorage.setItem(WALLPAPER_STORAGE_KEY, JSON.stringify(newWp));
+      if (url.length < 500000) {
+        localStorage.setItem(WALLPAPER_STORAGE_KEY, JSON.stringify(safeWp));
       } else {
         localStorage.removeItem(WALLPAPER_STORAGE_KEY);
       }
     } catch (e) {
       console.error(e);
     }
-    await vaultDB.saveWallpaper(newWp);
+    try {
+      await vaultDB.saveWallpaper(safeWp);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const removeWallpaper = async () => {
@@ -203,7 +245,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Effective colors for the currently selected theme
   const currentThemeKey = theme === 'light' ? 'ivory' : theme;
   const currentDefaultColors = BUILTIN_THEMES_DEFAULT[currentThemeKey] || BUILTIN_THEMES_DEFAULT.ivory;
-  const currentColors = themePalettes[currentThemeKey] || currentDefaultColors;
+  const currentColors: CustomThemeColors = {
+    ...currentDefaultColors,
+    ...(themePalettes[currentThemeKey] || {}),
+  };
 
   const isDark = theme === 'dark' || theme === 'pixel';
   const isThemeCustomized = Boolean(themePalettes[currentThemeKey]);
@@ -298,16 +343,30 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem(THEME_KEY, theme);
   }, [theme, currentColors, currentThemeKey, isDark]);
 
+  // Sync or clean up activePresetId if referenced preset no longer exists
+  useEffect(() => {
+    if (activePresetId && !savedPresets.some((p) => p.id === activePresetId)) {
+      setActivePresetId(null);
+      localStorage.removeItem(ACTIVE_PRESET_KEY);
+    }
+  }, [activePresetId, savedPresets]);
+
   const toggleTheme = () => {
     setThemeState((prev) => (prev === 'dark' ? 'ivory' : 'dark'));
+    setActivePresetId(null);
+    localStorage.removeItem(ACTIVE_PRESET_KEY);
   };
 
   const setTheme = (newTheme: ThemeMode) => {
     setThemeState(newTheme);
+    setActivePresetId(null);
+    localStorage.removeItem(ACTIVE_PRESET_KEY);
   };
 
   // Modify the colors of the current active theme (built-in or custom)
   const setCustomColors = (newColors: Partial<CustomThemeColors>) => {
+    setActivePresetId(null);
+    localStorage.removeItem(ACTIVE_PRESET_KEY);
     setThemePalettes((prev) => {
       const updatedCurrent = {
         ...(prev[currentThemeKey] || currentDefaultColors),
@@ -324,12 +383,97 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Reset the current theme back to its built-in default palette
   const resetCustomColors = () => {
+    setActivePresetId(null);
+    localStorage.removeItem(ACTIVE_PRESET_KEY);
     setThemePalettes((prev) => {
       const updated = { ...prev };
       delete updated[currentThemeKey];
       localStorage.setItem(THEME_PALETTES_KEY, JSON.stringify(updated));
       return updated;
     });
+  };
+
+  // Preset handlers
+  const addPreset = (name: string, showInHeader: boolean = true): ThemePreset => {
+    const newPreset: ThemePreset = {
+      id: `preset-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: name.trim() || '未命名预设',
+      themeMode: theme,
+      colors: { ...currentColors, wallpaper },
+      showInHeader,
+      createdAt: new Date().toISOString(),
+    };
+
+    setSavedPresets((prev) => {
+      const updated = [newPreset, ...prev];
+      localStorage.setItem(THEME_PRESETS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+
+    setActivePresetId(newPreset.id);
+    localStorage.setItem(ACTIVE_PRESET_KEY, newPreset.id);
+
+    return newPreset;
+  };
+
+  const updatePreset = (id: string, updates: Partial<ThemePreset>) => {
+    setSavedPresets((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      localStorage.setItem(THEME_PRESETS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const deletePreset = (id: string) => {
+    setSavedPresets((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      localStorage.setItem(THEME_PRESETS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    if (activePresetId === id) {
+      setActivePresetId(null);
+      localStorage.removeItem(ACTIVE_PRESET_KEY);
+    }
+  };
+
+  const applyPreset = (preset: ThemePreset) => {
+    if (!preset || !preset.id) return;
+
+    try {
+      const mode = preset.themeMode || 'custom';
+      const targetKey = mode === 'light' ? 'ivory' : mode;
+      
+      const defaultForTarget = BUILTIN_THEMES_DEFAULT[targetKey] || BUILTIN_THEMES_DEFAULT.ivory;
+      const cleanColors = { ...(preset.colors || {}) };
+      delete (cleanColors as any).wallpaper; // separate wallpaper from colors map
+
+      const mergedColors: CustomThemeColors = {
+        ...defaultForTarget,
+        ...cleanColors,
+      };
+
+      setThemePalettes((prev) => {
+        const updated = {
+          ...prev,
+          [targetKey]: mergedColors,
+        };
+        localStorage.setItem(THEME_PALETTES_KEY, JSON.stringify(updated));
+        return updated;
+      });
+
+      setThemeState(mode);
+      localStorage.setItem(THEME_KEY, mode);
+
+      setActivePresetId(preset.id);
+      localStorage.setItem(ACTIVE_PRESET_KEY, preset.id);
+
+      // Apply wallpaper if exists in preset
+      if (preset.colors && preset.colors.wallpaper) {
+        setWallpaper(preset.colors.wallpaper);
+      }
+    } catch (e) {
+      console.error('Error applying theme preset:', e);
+    }
   };
 
   return (
@@ -348,6 +492,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         wallpaper,
         setWallpaper,
         removeWallpaper,
+        savedPresets,
+        activePresetId,
+        addPreset,
+        updatePreset,
+        deletePreset,
+        applyPreset,
       }}
     >
       {children}
