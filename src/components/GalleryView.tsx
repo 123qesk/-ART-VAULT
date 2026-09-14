@@ -48,6 +48,7 @@ interface GalleryViewProps {
   onBatchSoftDelete?: (ids: string[]) => void;
   onBatchRestore?: (ids: string[]) => void;
   onBatchPermanentDelete?: (ids: string[]) => void;
+  onBatchUpdateTags?: (ids: string[], action: 'add' | 'remove' | 'set', tags: string[]) => Promise<void>;
   onEmptyRecycleBin: () => void;
   onOpenAddModal: () => void;
   categories: CategoryItem[];
@@ -347,6 +348,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   onBatchSoftDelete,
   onBatchRestore,
   onBatchPermanentDelete,
+  onBatchUpdateTags,
   onEmptyRecycleBin,
   onOpenAddModal,
   categories,
@@ -370,7 +372,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(GALLERY_LAYOUT_KEY);
-        if (saved === 'list' || saved === 'masonry') {
+        if (saved === 'list' || saved === 'masonry' || saved === 'timeline') {
           return saved;
         }
       } catch (e) {
@@ -539,6 +541,119 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
 
     return list;
   }, [artworks, deletedArtworks, selectedCategory, statusFilter, searchQuery, selectedTag, dateFilter, sortOrder]);
+
+  // Batch Tag Editing State
+  const [isBatchTagModalOpen, setIsBatchTagModalOpen] = useState(false);
+  const [batchTagAction, setBatchTagAction] = useState<'add' | 'remove' | 'set'>('add');
+  const [batchTagsInput, setBatchTagsInput] = useState('');
+  const [selectedTagsForBatch, setSelectedTagsForBatch] = useState<string[]>([]);
+  const [isSubmittingBatchTags, setIsSubmittingBatchTags] = useState(false);
+
+  // All unique tags in the artwork library for quick selection
+  const existingTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    artworks.forEach((art) => {
+      if (art.tags) {
+        art.tags.forEach((t) => tagSet.add(t.trim()));
+      }
+    });
+    return Array.from(tagSet).filter(Boolean);
+  }, [artworks]);
+
+  // Common tags among selected artworks
+  const selectedArtworksCommonTags = useMemo(() => {
+    if (selectedArtworkIds.length === 0) return [];
+    const selectedArts = artworks.filter((a) => selectedArtworkIds.includes(a.id));
+    const tagCounts = new Map<string, number>();
+    selectedArts.forEach((a) => {
+      if (a.tags) {
+        const uniqueTags = Array.from(new Set(a.tags));
+        uniqueTags.forEach((t: string) => {
+          tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+        });
+      }
+    });
+    return Array.from(tagCounts.entries()).map(([tag, count]) => ({
+      tag,
+      count,
+      isAll: count === selectedArts.length,
+    }));
+  }, [selectedArtworkIds, artworks]);
+
+  // Timeline Grouping Logic by Year & Month
+  const timelineGroups = useMemo(() => {
+    if (layoutMode !== 'timeline') return [];
+
+    const map = new Map<string, Artwork[]>();
+
+    filteredArtworks.forEach((art) => {
+      let key = '未知日期';
+      if (art.date) {
+        const d = new Date(art.date);
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          key = `${year}年${month}月`;
+        }
+      } else if (art.createdAt) {
+        const d = new Date(art.createdAt);
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          key = `${year}年${month}月`;
+        }
+      }
+
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(art);
+    });
+
+    const sortedKeys = Array.from(map.keys()).sort((a, b) => {
+      if (a === '未知日期') return 1;
+      if (b === '未知日期') return -1;
+      return b.localeCompare(a);
+    });
+
+    return sortedKeys.map((key) => ({
+      title: key,
+      items: map.get(key)!,
+    }));
+  }, [filteredArtworks, layoutMode]);
+
+  const handleApplyBatchTags = async () => {
+    if (selectedArtworkIds.length === 0) return;
+
+    const inputTagsList = batchTagsInput
+      .split(/[,，\s]+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const combinedTags = Array.from(new Set([...inputTagsList, ...selectedTagsForBatch]));
+
+    if (combinedTags.length === 0 && batchTagAction !== 'set') {
+      alert('请选择或输入要处理的标签');
+      return;
+    }
+
+    try {
+      setIsSubmittingBatchTags(true);
+      if (onBatchUpdateTags) {
+        await onBatchUpdateTags(selectedArtworkIds, batchTagAction, combinedTags);
+      }
+      setIsBatchTagModalOpen(false);
+      setBatchTagsInput('');
+      setSelectedTagsForBatch([]);
+      setIsMultiSelectMode(false);
+      setSelectedArtworkIds([]);
+    } catch (err) {
+      console.error(err);
+      alert('批量修改标签失败，请稍后重试');
+    } finally {
+      setIsSubmittingBatchTags(false);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -923,6 +1038,24 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   <List className="w-4 h-4" />
                 </button>
 
+                {/* 3. 时间轴 Icon Button */}
+                <button
+                  id="btn-layout-timeline"
+                  onClick={() => {
+                    setLayoutMode('timeline');
+                    setShowMasonryDropdown(false);
+                  }}
+                  className={`p-2 rounded-lg transition-all ${
+                    layoutMode === 'timeline'
+                      ? 'bg-white dark:bg-neutral-700 shadow-xs text-neutral-900 dark:text-white'
+                      : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                  }`}
+                  title="按年月时间轴纵向排列"
+                  aria-label="时间轴排版"
+                >
+                  <Calendar className="w-4 h-4" />
+                </button>
+
                 {/* Dropdown Options below the 瀑布流 icon */}
                 {showMasonryDropdown && (
                   <div 
@@ -1047,19 +1180,36 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                     </button>
                   </>
                 ) : (
-                  <button
-                    disabled={selectedArtworkIds.length === 0}
-                    onClick={() => {
-                      if (selectedArtworkIds.length === 0) return;
-                      onBatchSoftDelete?.(selectedArtworkIds);
-                      setSelectedArtworkIds([]);
-                      setIsMultiSelectMode(false);
-                    }}
-                    className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white shadow-sm transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>批量删除 ({selectedArtworkIds.length})</span>
-                  </button>
+                  <>
+                    <button
+                      disabled={selectedArtworkIds.length === 0}
+                      onClick={() => setIsBatchTagModalOpen(true)}
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))',
+                        borderColor: 'var(--accent-gold)',
+                        color: 'var(--accent-gold)',
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl border disabled:opacity-40 shadow-xs transition-all hover:opacity-90"
+                      title="批量添加或移除选中作品的标签"
+                    >
+                      <Tag className="w-4 h-4" />
+                      <span>批量编辑标签 ({selectedArtworkIds.length})</span>
+                    </button>
+
+                    <button
+                      disabled={selectedArtworkIds.length === 0}
+                      onClick={() => {
+                        if (selectedArtworkIds.length === 0) return;
+                        onBatchSoftDelete?.(selectedArtworkIds);
+                        setSelectedArtworkIds([]);
+                        setIsMultiSelectMode(false);
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white shadow-sm transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>批量删除 ({selectedArtworkIds.length})</span>
+                    </button>
+                  </>
                 )}
 
                 <button
@@ -1268,6 +1418,96 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   ))}
                 </div>
               )}
+
+              {/* 3. TIMELINE LAYOUT (按年份与月份纵向排列) */}
+              {layoutMode === 'timeline' && (
+                <div className="relative pl-5 sm:pl-8 space-y-8 py-2">
+                  {/* Vertical Timeline Guide Line */}
+                  <div 
+                    className="absolute left-2.5 sm:left-4 top-4 bottom-4 w-0.5 rounded-full"
+                    style={{
+                      background: 'linear-gradient(to bottom, var(--accent-gold), color-mix(in srgb, var(--accent-gold) 20%, transparent))',
+                    }}
+                  />
+
+                  {timelineGroups.map((group) => (
+                    <div key={group.title} className="relative space-y-4">
+                      {/* Month Header Node */}
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div 
+                          className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 -ml-[23px] sm:-ml-[30px] shadow-xs"
+                          style={{
+                            backgroundColor: 'var(--card-bg)',
+                            borderColor: 'var(--accent-gold)',
+                          }}
+                        >
+                          <div 
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: 'var(--accent-gold)' }}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <h3 
+                            className="font-art-serif text-base sm:text-lg font-bold tracking-wide"
+                            style={{ color: 'var(--text-main)' }}
+                          >
+                            {group.title}
+                          </h3>
+                          <span 
+                            className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-medium border"
+                            style={{
+                              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                              borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                              color: 'var(--accent-gold)',
+                            }}
+                          >
+                            {group.items.length} 件作品
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Artworks Grid inside Month */}
+                      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 sm:gap-5 items-stretch pl-1 sm:pl-2">
+                        {group.items.map((art) => (
+                          <ArtworkCard
+                            key={art.id}
+                            artwork={art}
+                            customStatuses={statuses}
+                            onClick={() => {
+                              if (isMultiSelectMode) {
+                                setSelectedArtworkIds((prev) =>
+                                  prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
+                                );
+                              } else {
+                                onSelectArtwork(art);
+                              }
+                            }}
+                            onToggleFavorite={(e) => {
+                              e.stopPropagation();
+                              onToggleFavorite(art.id);
+                            }}
+                            onTogglePin={(e) => {
+                              e.stopPropagation();
+                              onTogglePin(art.id);
+                            }}
+                            isSelectionMode={isMultiSelectMode}
+                            isSelected={selectedArtworkIds.includes(art.id)}
+                            onToggleSelect={() => {
+                              setSelectedArtworkIds((prev) =>
+                                prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
+                              );
+                            }}
+                            isTrashMode={selectedCategory === 'trash'}
+                            onRestore={() => onRestoreArtwork(art.id)}
+                            onPermanentDelete={() => onPermanentDeleteArtwork(art.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             /* Empty State */
@@ -1436,6 +1676,247 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 className="px-5 py-2 rounded-xl text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
               >
                 完成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Tag Edit Modal */}
+      {isBatchTagModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div 
+            style={{
+              backgroundColor: 'var(--modal-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text-main)',
+            }}
+            className="w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+          >
+            {/* Modal Header */}
+            <div 
+              className="p-5 border-b flex items-center justify-between"
+              style={{ borderColor: 'var(--card-border)' }}
+            >
+              <div className="flex items-center gap-2.5">
+                <div 
+                  className="p-2 rounded-xl"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' }}
+                >
+                  <Tag className="w-5 h-5" style={{ color: 'var(--accent-gold)' }} />
+                </div>
+                <div>
+                  <h2 className="font-art-serif text-lg font-bold">批量编辑作品标签</h2>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    已选中 <span className="font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>{selectedArtworkIds.length}</span> 件作品
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsBatchTagModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-neutral-500/10 transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-5 overflow-y-auto flex-1">
+              {/* Action Mode Tabs */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>操作类型</label>
+                <div 
+                  className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl border"
+                  style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBatchTagAction('add');
+                      setSelectedTagsForBatch([]);
+                    }}
+                    className="py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    style={{
+                      backgroundColor: batchTagAction === 'add' ? 'var(--accent-gold)' : 'transparent',
+                      color: batchTagAction === 'add' ? '#FFFFFF' : 'var(--text-main)',
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>追加标签</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBatchTagAction('remove');
+                      setSelectedTagsForBatch([]);
+                    }}
+                    className="py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    style={{
+                      backgroundColor: batchTagAction === 'remove' ? 'var(--accent-gold)' : 'transparent',
+                      color: batchTagAction === 'remove' ? '#FFFFFF' : 'var(--text-main)',
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>移除标签</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBatchTagAction('set');
+                      setSelectedTagsForBatch([]);
+                    }}
+                    className="py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    style={{
+                      backgroundColor: batchTagAction === 'set' ? 'var(--accent-gold)' : 'transparent',
+                      color: batchTagAction === 'set' ? '#FFFFFF' : 'var(--text-main)',
+                    }}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>重置覆盖</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode Description */}
+              <div 
+                className="p-3 rounded-xl border text-xs leading-relaxed"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 25%, transparent)',
+                  color: 'var(--text-main)',
+                }}
+              >
+                {batchTagAction === 'add' && '💡 将选中的标签批量追加至所选作品中，保留原有的其他标签。'}
+                {batchTagAction === 'remove' && '💡 从所选作品中批量剔除指定的标签，其余标签不受影响。'}
+                {batchTagAction === 'set' && '💡 将所选作品的标签统一重置为以下指定的标签。'}
+              </div>
+
+              {/* Input New Tags */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold flex items-center justify-between" style={{ color: 'var(--text-main)' }}>
+                  <span>手动输入标签 (支持逗号/空格分隔)</span>
+                </label>
+                <input
+                  type="text"
+                  value={batchTagsInput}
+                  onChange={(e) => setBatchTagsInput(e.target.value)}
+                  placeholder="如: 水彩, 赛博朋克, 角色设计"
+                  className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    backgroundColor: 'var(--search-bg)',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text-main)',
+                  }}
+                />
+              </div>
+
+              {/* Tag Pickers */}
+              {batchTagAction === 'remove' ? (
+                /* Remove Mode: Show tags present on selected artworks */
+                <div className="space-y-2">
+                  <label className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                    点击选择要移除的已有标签 ({selectedArtworksCommonTags.length} 个):
+                  </label>
+                  {selectedArtworksCommonTags.length === 0 ? (
+                    <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>
+                      选中的作品当前没有包含任何标签。
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1">
+                      {selectedArtworksCommonTags.map(({ tag, count }) => {
+                        const isSelected = selectedTagsForBatch.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTagsForBatch((prev) =>
+                                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                              );
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1"
+                            style={{
+                              backgroundColor: isSelected
+                                ? 'rgba(239, 68, 68, 0.15)'
+                                : 'var(--card-bg)',
+                              borderColor: isSelected ? '#EF4444' : 'var(--card-border)',
+                              color: isSelected ? '#EF4444' : 'var(--text-main)',
+                            }}
+                          >
+                            <span>#{tag}</span>
+                            <span className="text-[10px] opacity-70 font-mono">({count})</span>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Add / Set Mode: Show All Existing Tags in Vault */
+                <div className="space-y-2">
+                  <label className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                    点击选取画匣常用标签 ({existingTags.length} 个):
+                  </label>
+                  {existingTags.length === 0 ? (
+                    <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>
+                      画匣中暂无常用标签，直接在上方输入框键入即可。
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1">
+                      {existingTags.map((tag) => {
+                        const isSelected = selectedTagsForBatch.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTagsForBatch((prev) =>
+                                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                              );
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1"
+                            style={{
+                              backgroundColor: isSelected
+                                ? 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))'
+                                : 'var(--card-bg)',
+                              borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+                              color: isSelected ? 'var(--accent-gold)' : 'var(--text-main)',
+                            }}
+                          >
+                            <span>#{tag}</span>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div 
+              className="p-4 border-t flex items-center justify-end gap-2.5"
+              style={{ borderColor: 'var(--card-border)' }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsBatchTagModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-80 transition-opacity"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingBatchTags}
+                onClick={handleApplyBatchTags}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent-gold)' }}
+              >
+                {isSubmittingBatchTags ? '处理中...' : '确认应用至选中的作品'}
               </button>
             </div>
           </div>

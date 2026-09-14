@@ -200,6 +200,46 @@ class ArtVaultDatabase {
     }
   }
 
+  async batchUpdateArtworkTags(
+    ids: string[],
+    action: 'add' | 'remove' | 'set',
+    tagsToApply: string[]
+  ): Promise<void> {
+    const db = await this.getDB();
+    const tx = db.transaction('artworks', 'readwrite');
+    const store = tx.objectStore('artworks');
+
+    for (const id of ids) {
+      const art = await this.getArtworkById(id);
+      if (!art) continue;
+
+      let currentTags = art.tags ? [...art.tags] : [];
+
+      if (action === 'add') {
+        tagsToApply.forEach((t) => {
+          const trimmed = t.trim();
+          if (trimmed && !currentTags.includes(trimmed)) {
+            currentTags.push(trimmed);
+          }
+        });
+      } else if (action === 'remove') {
+        const removeSet = new Set(tagsToApply.map((t) => t.trim()));
+        currentTags = currentTags.filter((t) => !removeSet.has(t));
+      } else if (action === 'set') {
+        currentTags = tagsToApply.map((t) => t.trim()).filter(Boolean);
+      }
+
+      art.tags = currentTags;
+      art.updatedAt = new Date().toISOString();
+      store.put(art);
+    }
+
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
   async emptyRecycleBin(): Promise<void> {
     const all = await this.getAllArtworks(true);
     const deleted = all.filter((a) => a.isDeleted);

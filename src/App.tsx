@@ -178,6 +178,13 @@ export default function App() {
     showToast(`已彻底删除选中的 ${ids.length} 件作品`);
   };
 
+  const handleBatchUpdateTags = async (ids: string[], action: 'add' | 'remove' | 'set', tags: string[]) => {
+    await vaultDB.batchUpdateArtworkTags(ids, action, tags);
+    await refreshData();
+    const actionLabel = action === 'add' ? '添加' : action === 'remove' ? '移除' : '重置';
+    showToast(`已成功为 ${ids.length} 件作品批量${actionLabel}标签`);
+  };
+
   // Category & Status updates
   const handleUpdateCategories = (newCategories: CategoryItem[]) => {
     vaultDB.saveCategories(newCategories);
@@ -327,6 +334,7 @@ export default function App() {
               onBatchSoftDelete={handleBatchSoftDeleteArtworks}
               onBatchRestore={handleBatchRestoreArtworks}
               onBatchPermanentDelete={handleBatchPermanentDeleteArtworks}
+              onBatchUpdateTags={handleBatchUpdateTags}
               onEmptyRecycleBin={handleEmptyRecycleBin}
               onOpenAddModal={() => {
                 setEditingArtwork(null);

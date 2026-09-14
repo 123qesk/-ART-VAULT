@@ -66,7 +66,7 @@ export type DateFilter = 'all' | 'today' | '7days' | '30days' | 'year' | 'custom
 
 export type SortOrder = 'newest' | 'oldest' | 'title' | 'largest';
 
-export type GalleryLayoutMode = 'masonry' | 'list';
+export type GalleryLayoutMode = 'masonry' | 'list' | 'timeline';
 
 export type ThemeMode = 'ivory' | 'pure_white' | 'dark' | 'pink' | 'pixel' | 'custom' | 'light';
 

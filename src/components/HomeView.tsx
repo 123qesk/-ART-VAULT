@@ -33,7 +33,7 @@ interface HomeViewProps {
 const DEFAULT_GREETING_TITLE = '你好，画师';
 const DEFAULT_GREETING_SUBTITLE = '今天也来画点什么吧。灵感稍纵即逝，将每一个笔触与故事装入画匣。';
 const DEFAULT_ARCHIVE_TITLE = '个人作品档案馆';
-const DEFAULT_ARTIST_NAME = '莫奈画师';
+const DEFAULT_ARTIST_NAME = '在此填写昵称';
 const DEFAULT_ARTIST_SIGNATURE = '以画笔勾勒世界，用色彩记录生活 · 画室主理人 ✨';
 const DEFAULT_ARTIST_STATUS = '创作中';
 const DEFAULT_ARTIST_ROLE = '画室主理人';

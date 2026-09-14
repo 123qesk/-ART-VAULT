@@ -371,7 +371,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 🎨
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-bold text-[11px] truncate" style={{ color: 'var(--text-main)' }}>莫奈画师 · 画室主理人</p>
+                <p className="font-bold text-[11px] truncate" style={{ color: 'var(--text-main)' }}>画师 · 画室主理人</p>
                 <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>以画笔勾勒世界，用色彩记录生活 ✨</p>
               </div>
               <span 
@@ -486,7 +486,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               color: 'var(--accent-gold)',
             }}
           >
-            当前：{autoPlayMedia ? '自动播放 (开启)' : '仅静态封面 (关闭)'}
+            当前：{autoPlayMedia ? '自动播放' : '仅静态封面'}
           </span>
         </div>
 
@@ -1614,7 +1614,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span>数据存储与备份</span>
             </h2>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              您的作品原图/动图/视频、标签、日期及日记均储存于浏览器专属的本地数据库 (IndexedDB)，安全私密且不限常规5MB容量。
+              您的作品原图/动图/视频、标签、日期及日记均储存于浏览器专属的本地数据库 (IndexedDB)，安全私密。
             </p>
           </div>
           <div className="text-right shrink-0">
