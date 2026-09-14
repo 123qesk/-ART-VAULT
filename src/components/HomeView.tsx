@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Plus, 
   ArrowRight, 
@@ -21,6 +21,7 @@ import {
 import { Artwork, DiaryEntry, ViewTab } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { AVATAR_PRESETS, DEFAULT_AVATAR } from '../utils/avatarPresets';
+import { vaultDB } from '../services/db';
 
 interface HomeViewProps {
   artworks: Artwork[];
@@ -37,6 +38,7 @@ const DEFAULT_ARTIST_NAME = '在此填写昵称';
 const DEFAULT_ARTIST_SIGNATURE = '以画笔勾勒世界，用色彩记录生活 · 画室主理人 ✨';
 const DEFAULT_ARTIST_STATUS = '创作中';
 const DEFAULT_ARTIST_ROLE = '画室主理人';
+const DEFAULT_ART_QUOTE = '“画布是思想的镜子，而画匣则是时间酿造的陈香。”';
 
 export const HomeView: React.FC<HomeViewProps> = ({
   artworks,
@@ -85,6 +87,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Sync avatar from IndexedDB on component mount to fix resetting across page switches
+  useEffect(() => {
+    vaultDB.getSetting<string>('artist_avatar').then((saved) => {
+      if (saved) {
+        setAvatarUrl(saved);
+        try {
+          localStorage.setItem('art_vault_artist_avatar', saved);
+        } catch (e) {
+          // ignore localStorage quota warning
+        }
+      }
+    });
+  }, []);
+
   // Artist Status State
   const [artistStatus, setArtistStatus] = useState<string>(() => {
     return localStorage.getItem('art_vault_artist_status') || DEFAULT_ARTIST_STATUS;
@@ -99,11 +115,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [isEditingRole, setIsEditingRole] = useState(false);
   const [tempRole, setTempRole] = useState(artistRole);
 
+  // Editable Bottom Art Quote / Slogan
+  const [artQuote, setArtQuote] = useState<string>(() => {
+    return localStorage.getItem('art_vault_art_quote') || DEFAULT_ART_QUOTE;
+  });
+  const [isEditingQuote, setIsEditingQuote] = useState(false);
+  const [tempQuote, setTempQuote] = useState(artQuote);
+
   const handleSaveRole = () => {
     const val = tempRole.trim() || DEFAULT_ARTIST_ROLE;
     setArtistRole(val);
     localStorage.setItem('art_vault_artist_role', val);
     setIsEditingRole(false);
+  };
+
+  const handleSaveQuote = () => {
+    const val = tempQuote.trim() || DEFAULT_ART_QUOTE;
+    setArtQuote(val);
+    localStorage.setItem('art_vault_art_quote', val);
+    setIsEditingQuote(false);
   };
 
   const handleSaveStatus = () => {
@@ -150,7 +180,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   const handleSelectAvatar = (url: string) => {
     setAvatarUrl(url);
-    localStorage.setItem('art_vault_artist_avatar', url);
+    vaultDB.saveSetting('artist_avatar', url);
+    try {
+      localStorage.setItem('art_vault_artist_avatar', url);
+    } catch (e) {
+      console.warn('localStorage quota exceeded, saved avatar in IndexedDB', e);
+    }
   };
 
   const handleCustomAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +194,36 @@ export const HomeView: React.FC<HomeViewProps> = ({
     const reader = new FileReader();
     reader.onload = (ev) => {
       if (typeof ev.target?.result === 'string') {
-        handleSelectAvatar(ev.target.result);
+        const rawUrl = ev.target.result;
+        // Resize image to max 300x300 via canvas to prevent quota overflow & improve rendering speed
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 300;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, w, h);
+            const compressedUrl = canvas.toDataURL('image/png', 0.9);
+            handleSelectAvatar(compressedUrl);
+          } else {
+            handleSelectAvatar(rawUrl);
+          }
+        };
+        img.onerror = () => handleSelectAvatar(rawUrl);
+        img.src = rawUrl;
       }
     };
     reader.readAsDataURL(file);
@@ -169,28 +233,36 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const totalArtworks = artworks.length;
   
   // Current month's works
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-  const currentYearMonthPrefix = `${currentYear}-${currentMonth}`;
-  const thisMonthArtworks = artworks.filter((a) => a.date.startsWith(currentYearMonthPrefix)).length;
+  const thisMonthArtworks = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const currentYearMonthPrefix = `${currentYear}-${currentMonth}`;
+    return artworks.filter((a) => a.date && a.date.startsWith(currentYearMonthPrefix)).length;
+  }, [artworks]);
 
   // Favorites
-  const favoriteArtworks = artworks.filter((a) => a.isFavorite);
+  const favoriteArtworks = useMemo(() => {
+    return artworks.filter((a) => a.isFavorite);
+  }, [artworks]);
 
   // Recent artworks (top 6 sorted by pinned first, then date descending)
-  const recentArtworks = [...artworks]
-    .sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return new Date(b.date || b.updatedAt).getTime() - new Date(a.date || a.updatedAt).getTime();
-    })
-    .slice(0, 6);
+  const recentArtworks = useMemo(() => {
+    return [...artworks]
+      .sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.date || b.updatedAt).getTime() - new Date(a.date || a.updatedAt).getTime();
+      })
+      .slice(0, 6);
+  }, [artworks]);
 
   // Recent diary creation logs (top 4)
-  const recentDiaries = [...diaries]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 4);
+  const recentDiaries = useMemo(() => {
+    return [...diaries]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 4);
+  }, [diaries]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10 sm:space-y-14 animate-in fade-in duration-300">
@@ -899,15 +971,53 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Quote / Artist Space Bottom Banner - Styled with dynamic module colors */}
       <div 
-        className="p-6 rounded-3xl border text-center space-y-1"
+        className="p-6 rounded-3xl border text-center space-y-1.5 transition-all group/quote"
         style={{
           backgroundColor: 'var(--content-bg)',
           borderColor: 'var(--card-border)',
         }}
       >
-        <p className="font-art-serif text-sm italic" style={{ color: 'var(--text-main)' }}>
-          “画布是思想的镜子，而画匣则是时间酿造的陈香。”
-        </p>
+        {isEditingQuote ? (
+          <div className="flex items-center justify-center gap-2 max-w-xl mx-auto">
+            <input
+              type="text"
+              value={tempQuote}
+              onChange={(e) => setTempQuote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveQuote();
+                if (e.key === 'Escape') setIsEditingQuote(false);
+              }}
+              autoFocus
+              className="font-art-serif text-sm italic text-center rounded-xl px-3 py-1.5 border-2 focus:outline-none w-full bg-white dark:bg-[#181B22]"
+              style={{
+                borderColor: 'var(--accent-gold)',
+                color: 'var(--text-main)',
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleSaveQuote}
+              className="p-2 rounded-xl text-white active:scale-95 transition-all shrink-0"
+              style={{ backgroundColor: 'var(--accent-gold)' }}
+              title="保存名言寄语"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <p 
+            onClick={() => {
+              setTempQuote(artQuote);
+              setIsEditingQuote(true);
+            }}
+            title="点击修改艺术格言"
+            className="font-art-serif text-sm sm:text-base italic cursor-pointer hover:opacity-85 inline-flex items-center justify-center gap-2 transition-all"
+            style={{ color: 'var(--text-main)' }}
+          >
+            <span>{artQuote}</span>
+            <Edit2 className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/quote:opacity-100 transition-opacity shrink-0" />
+          </p>
+        )}
         <p className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
           画匣 · ART VAULT · 随心创作，安心存档
         </p>

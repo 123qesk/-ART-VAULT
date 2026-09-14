@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Heart, Pin, Calendar, Eye, Check, RotateCcw, Trash2, Play } from 'lucide-react';
 import { Artwork, StatusItem } from '../types';
 import { useTheme } from '../context/ThemeContext';
@@ -17,7 +17,10 @@ interface ArtworkCardProps {
   onPermanentDelete?: (e: React.MouseEvent) => void;
 }
 
-export const ArtworkCard: React.FC<ArtworkCardProps> = ({
+// Memory cache for static GIF cover images to prevent repeated canvas processing and re-render lag
+const staticGifCache = new Map<string, string>();
+
+export const ArtworkCardComponent: React.FC<ArtworkCardProps> = ({
   artwork,
   onClick,
   onToggleFavorite,
@@ -32,10 +35,16 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const { autoPlayMedia } = useTheme();
-  const [staticGifCover, setStaticGifCover] = useState<string | null>(null);
+  const [staticGifCover, setStaticGifCover] = useState<string | null>(() => {
+    return artwork.fileType === 'gif' && artwork.imageUrl ? staticGifCache.get(artwork.imageUrl) || null : null;
+  });
 
   useEffect(() => {
     if (artwork.fileType === 'gif' && !autoPlayMedia && artwork.imageUrl) {
+      if (staticGifCache.has(artwork.imageUrl)) {
+        setStaticGifCover(staticGifCache.get(artwork.imageUrl)!);
+        return;
+      }
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
@@ -46,7 +55,9 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0);
-            setStaticGifCover(canvas.toDataURL('image/png'));
+            const dataUrl = canvas.toDataURL('image/png');
+            staticGifCache.set(artwork.imageUrl, dataUrl);
+            setStaticGifCover(dataUrl);
           }
         } catch (e) {
           // fallback
@@ -162,6 +173,7 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
                 src={(artwork.fileType === 'gif' && !autoPlayMedia && staticGifCover) ? staticGifCover : artwork.imageUrl}
                 alt={artwork.title}
                 loading="lazy"
+                decoding="async"
                 style={{
                   transform: artwork.previewScale ? `scale(${artwork.previewScale / 100})` : undefined,
                 }}
@@ -409,3 +421,5 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
     </div>
   );
 };
+
+export const ArtworkCard = React.memo(ArtworkCardComponent);

@@ -117,9 +117,24 @@
     border-color: var(--card-border);
   }
 
-  /* Style presets: Glassmorphism, Neumorphism, Flat */
+  /* Style presets: Default, Glassmorphism, Neumorphism, Flat */
   
-  /* 1. 毛玻璃风格 (Glassmorphism) */
+  /* 0. 默认微光风格 (Default - Subtle Studio Elevation) */
+  html.theme-style-default [style*="--card-bg"],
+  html.theme-style-default [style*="--module-bg"],
+  html.theme-style-default .app-card,
+  html.theme-style-default .app-module {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 18px -4px rgba(0, 0, 0, 0.03);
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+  html.dark.theme-style-default [style*="--card-bg"],
+  html.dark.theme-style-default [style*="--module-bg"],
+  html.dark.theme-style-default .app-card,
+  html.dark.theme-style-default .app-module {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 8px 24px -6px rgba(0, 0, 0, 0.35);
+  }
+
+  /* 1. 毛玻璃风格 (Glassmorphism - Prismatic & Crystalline) */
   html.theme-style-glass [style*="--card-bg"],
   html.theme-style-glass [style*="--module-bg"],
   html.theme-style-glass [style*="--navbar-bg"],
@@ -133,10 +148,10 @@
   html.theme-style-glass nav,
   html.theme-style-glass dialog,
   html.theme-style-glass [role="dialog"] {
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    border-color: color-mix(in srgb, var(--accent-gold) 15%, rgba(255, 255, 255, 0.65)) !important;
+    box-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.05), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85) !important;
   }
 
   html.dark.theme-style-glass [style*="--card-bg"],
@@ -152,13 +167,13 @@
   html.dark.theme-style-glass nav,
   html.dark.theme-style-glass dialog,
   html.dark.theme-style-glass [role="dialog"] {
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-color: rgba(255, 255, 255, 0.12) !important;
-    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border-color: color-mix(in srgb, var(--accent-gold) 15%, rgba(255, 255, 255, 0.12)) !important;
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.14) !important;
   }
 
-  /* 2. 拟态风格 (Neumorphism - Multi-Module Enhanced) */
+  /* 2. 拟态风格 (Neumorphism - Velvet Emboss & Dual Light) */
   html.theme-style-neumorphism [style*="--card-bg"],
   html.theme-style-neumorphism [style*="--module-bg"],
   html.theme-style-neumorphism [style*="--modal-bg"],
@@ -170,8 +185,8 @@
   html.theme-style-neumorphism div.rounded-3xl.border,
   html.theme-style-neumorphism div.rounded-2xl.border,
   html.theme-style-neumorphism [role="dialog"] > div {
-    box-shadow: 8px 8px 18px rgba(160, 175, 195, 0.35), -8px -8px 18px rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    box-shadow: 5px 5px 14px rgba(160, 170, 185, 0.22), -5px -5px 14px rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.65) !important;
   }
 
   html.dark.theme-style-neumorphism [style*="--card-bg"],
@@ -185,18 +200,18 @@
   html.dark.theme-style-neumorphism div.rounded-3xl.border,
   html.dark.theme-style-neumorphism div.rounded-2xl.border,
   html.dark.theme-style-neumorphism [role="dialog"] > div {
-    box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.6), -6px -6px 16px rgba(255, 255, 255, 0.035) !important;
+    box-shadow: 6px 6px 16px rgba(0, 0, 0, 0.62), -4px -4px 12px rgba(255, 255, 255, 0.035) !important;
     border: 1px solid rgba(255, 255, 255, 0.04) !important;
   }
 
   /* Neumorphic Navbar & Bottom Dock */
   html.theme-style-neumorphism header,
   html.theme-style-neumorphism nav[id="mobile-bottom-nav"] {
-    box-shadow: 0 6px 16px rgba(160, 175, 195, 0.3), 0 -2px 10px rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 4px 14px rgba(160, 170, 185, 0.2), 0 -1px 8px rgba(255, 255, 255, 0.85) !important;
   }
   html.dark.theme-style-neumorphism header,
   html.dark.theme-style-neumorphism nav[id="mobile-bottom-nav"] {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7), 0 -1px 8px rgba(255, 255, 255, 0.03) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65), 0 -1px 6px rgba(255, 255, 255, 0.03) !important;
   }
 
   /* Neumorphic Input / Search bar / Textarea (Inset concave feel) */
@@ -204,14 +219,14 @@
   html.theme-style-neumorphism input[type="search"],
   html.theme-style-neumorphism textarea,
   html.theme-style-neumorphism select {
-    box-shadow: inset 3px 3px 6px rgba(160, 175, 195, 0.35), inset -3px -3px 6px rgba(255, 255, 255, 0.85) !important;
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: inset 2.5px 2.5px 5px rgba(160, 170, 185, 0.22), inset -2.5px -2.5px 5px rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
   }
   html.dark.theme-style-neumorphism input[type="text"],
   html.dark.theme-style-neumorphism input[type="search"],
   html.dark.theme-style-neumorphism textarea,
   html.dark.theme-style-neumorphism select {
-    box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.7), inset -2px -2px 6px rgba(255, 255, 255, 0.035) !important;
+    box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.65), inset -2px -2px 5px rgba(255, 255, 255, 0.03) !important;
     border: 1px solid rgba(255, 255, 255, 0.04) !important;
   }
 
@@ -220,26 +235,77 @@
   html.theme-style-neumorphism button.rounded-xl,
   html.theme-style-neumorphism button.rounded-full,
   html.theme-style-neumorphism button.rounded-2xl {
-    box-shadow: 4px 4px 10px rgba(160, 175, 195, 0.3), -3px -3px 8px rgba(255, 255, 255, 0.8);
+    box-shadow: 3px 3px 8px rgba(160, 170, 185, 0.2), -2px -2px 6px rgba(255, 255, 255, 0.85);
   }
   html.dark.theme-style-neumorphism button.shadow-sm,
   html.dark.theme-style-neumorphism button.rounded-xl,
   html.dark.theme-style-neumorphism button.rounded-full,
   html.dark.theme-style-neumorphism button.rounded-2xl {
-    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.5), -3px -3px 8px rgba(255, 255, 255, 0.03);
+    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.45), -2px -2px 6px rgba(255, 255, 255, 0.025);
   }
 
   html.theme-style-neumorphism button:active {
-    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.2), inset -2px -2px 5px rgba(255, 255, 255, 0.6) !important;
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.18), inset -2px -2px 4px rgba(255, 255, 255, 0.6) !important;
   }
 
-  /* 3. 扁平风格 (Flat) */
+  /* 3. 扁平风格 (Flat - Bauhaus Clean Architecture) */
   html.theme-style-flat [style*="--card-bg"],
   html.theme-style-flat [style*="--module-bg"],
   html.theme-style-flat .app-card,
-  html.theme-style-flat .app-module {
+  html.theme-style-flat .app-module,
+  html.theme-style-flat section.rounded-3xl,
+  html.theme-style-flat section.rounded-2xl {
     box-shadow: none !important;
-    border-radius: 6px !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+  }
+
+  html.theme-style-flat .app-card:hover {
+    border-color: var(--accent-gold) !important;
+  }
+
+  /* Sleek refined theme slider track and thumb */
+  .theme-slider-track {
+    height: 5px !important;
+    border-radius: 9999px !important;
+  }
+
+  .theme-slider-track::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.2s ease;
+  }
+
+  .theme-slider-track::-webkit-slider-thumb:hover,
+  .theme-slider-track::-webkit-slider-thumb:active {
+    transform: scale(1.25);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-gold) 30%, transparent), 0 2px 6px rgba(0, 0, 0, 0.2);
+    cursor: grabbing;
+  }
+
+  .theme-slider-track::-moz-range-thumb {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.2s ease;
+  }
+
+  .theme-slider-track::-moz-range-thumb:hover,
+  .theme-slider-track::-moz-range-thumb:active {
+    transform: scale(1.25);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-gold) 30%, transparent), 0 2px 6px rgba(0, 0, 0, 0.2);
+    cursor: grabbing;
   }
 }
 

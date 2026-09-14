@@ -12,9 +12,12 @@ import {
   RotateCcw,
   Check,
   Trash2,
-  Files
+  Files,
+  Pipette,
+  Wand2
 } from 'lucide-react';
 import { Artwork, CategoryItem, StatusItem } from '../types';
+import { ThemeSlider } from './ThemeSlider';
 
 export interface BatchFileItem {
   id: string;
@@ -110,6 +113,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const [fileType, setFileType] = useState<'image' | 'gif' | 'video' | 'psd' | 'ai'>('image');
   const [fileName, setFileName] = useState('');
   const [previewScale, setPreviewScale] = useState<number>(100);
+  const [progress, setProgress] = useState<number>(100);
   const [width, setWidth] = useState(3840);
   const [height, setHeight] = useState(2160);
   const [sizeBytes, setSizeBytes] = useState(8500000);
@@ -124,6 +128,59 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   // New category inline input
   const [isAddingNewCat, setIsAddingNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+
+  // Color Palette state (Requirement 2: 色卡模块)
+  const [colorPalette, setColorPalette] = useState<string[]>([]);
+  const [newColorHex, setNewColorHex] = useState('#FFFFFF');
+
+  const handleAddColorSwatch = (hexInput?: string) => {
+    let hex = (hexInput || newColorHex).trim();
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
+    hex = hex.toUpperCase();
+    if (!colorPalette.includes(hex)) {
+      setColorPalette([...colorPalette, hex]);
+    }
+  };
+
+  const handleRemoveColorSwatch = (hexToRemove: string) => {
+    setColorPalette(colorPalette.filter((c) => c !== hexToRemove));
+  };
+
+  const handleAutoExtractColors = () => {
+    if (!imageUrl) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 50;
+      canvas.height = 50;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, 50, 50);
+      const imgData = ctx.getImageData(0, 0, 50, 50).data;
+      const colorCounts: { [hex: string]: number } = {};
+      for (let i = 0; i < imgData.length; i += 16) {
+        const r = imgData[i];
+        const g = imgData[i + 1];
+        const b = imgData[i + 2];
+        const a = imgData[i + 3];
+        if (a < 128) continue;
+        const qr = Math.round(r / 32) * 32;
+        const qg = Math.round(g / 32) * 32;
+        const qb = Math.round(b / 32) * 32;
+        const hex = `#${((1 << 24) + (qr << 16) + (qg << 8) + qb).toString(16).slice(1).toUpperCase()}`;
+        colorCounts[hex] = (colorCounts[hex] || 0) + 1;
+      }
+      const sorted = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]).map(([h]) => h);
+      const extracted = sorted.slice(0, 6);
+      if (extracted.length > 0) {
+        const unique = Array.from(new Set([...colorPalette, ...extracted]));
+        setColorPalette(unique);
+      }
+    };
+    img.src = imageUrl;
+  };
 
   // Tag management state (supports deleting both built-in and custom tags, strictly tags only)
   const [customTagInput, setCustomTagInput] = useState('');
@@ -177,11 +234,13 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       setFileType(editArtwork.fileType || 'image');
       setFileName(editArtwork.fileName || '');
       setPreviewScale(editArtwork.previewScale || 100);
+      setProgress(typeof editArtwork.progress === 'number' ? editArtwork.progress : (editArtwork.status === '已完成' ? 100 : editArtwork.status === '草稿' ? 20 : 60));
       setWidth(editArtwork.width);
       setHeight(editArtwork.height);
       setSizeBytes(editArtwork.sizeBytes);
       setIsFavorite(editArtwork.isFavorite);
       setIsPinned(!!editArtwork.isPinned);
+      setColorPalette(editArtwork.colorPalette || []);
     } else {
       // Reset form - start with empty tags so user chooses their own
       setTitle('');
@@ -195,11 +254,13 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       setFileType('image');
       setFileName('');
       setPreviewScale(100);
+      setProgress(statuses[0]?.name === '已完成' ? 100 : 60);
       setWidth(3840);
       setHeight(2160);
       setSizeBytes(5200000);
       setIsFavorite(false);
       setIsPinned(false);
+      setColorPalette([]);
     }
     setErrorMsg('');
   }, [editArtwork, isOpen, categories, statuses]);
@@ -518,11 +579,13 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
             fileType: item.fileType,
             fileName: item.fileName,
             previewScale,
+            progress,
             width: item.width,
             height: item.height,
             sizeBytes: item.sizeBytes,
             isFavorite,
             isPinned,
+            colorPalette,
           });
         }
         onClose();
@@ -561,11 +624,13 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
           fileType,
           fileName,
           previewScale,
+          progress,
           width,
           height,
           sizeBytes,
           isFavorite,
           isPinned,
+          colorPalette,
         },
         editArtwork?.id
       );
@@ -812,31 +877,21 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
 
             {/* Image Scaling Slider after single upload */}
             {imageUrl && batchFiles.length <= 1 && (
-              <div className="mt-3 p-3 rounded-xl bg-neutral-50 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
-                  <ZoomIn className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-                  <span>作品显示缩放: <strong className="font-mono">{previewScale}%</strong></span>
-                </div>
-                <div className="flex items-center gap-3 flex-1 max-w-xs">
-                  <input
-                    type="range"
-                    min="50"
-                    max="180"
-                    step="5"
-                    value={previewScale}
-                    onChange={(e) => setPreviewScale(Number(e.target.value))}
-                    style={{ accentColor: 'var(--accent-gold)' }}
-                    className="w-full cursor-pointer"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setPreviewScale(100)}
-                    title="重置缩放比例"
-                    className="p-1 rounded text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              <div className="mt-3">
+                <ThemeSlider
+                  label="作品显示缩放"
+                  icon={<ZoomIn className="w-4 h-4" />}
+                  value={previewScale}
+                  onChange={(val) => setPreviewScale(val)}
+                  min={50}
+                  max={200}
+                  step={5}
+                  unit="%"
+                  showReset={true}
+                  defaultValue={100}
+                  onReset={() => setPreviewScale(100)}
+                  description="拖动调整画幅缩放比例，点击右侧数值可直接键盘输入自定义缩放"
+                />
               </div>
             )}
           </div>
@@ -950,7 +1005,13 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
               <select
                 id="modal-artwork-status"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => {
+                  const newStatus = e.target.value;
+                  setStatus(newStatus);
+                  if (newStatus === '已完成') setProgress(100);
+                  else if (newStatus === '草稿') setProgress(20);
+                  else if (newStatus === '创作中' && progress === 100) setProgress(60);
+                }}
                 style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
               >
                 {statuses.map((s) => (
@@ -960,6 +1021,28 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Creation Progress Slider */}
+          <div className="pt-1">
+            <ThemeSlider
+              label="创作进度"
+              icon={<Sliders className="w-4 h-4" />}
+              value={progress}
+              onChange={(val) => {
+                setProgress(val);
+                if (val === 100 && status !== '已完成') {
+                  setStatus('已完成');
+                } else if (val < 100 && status === '已完成') {
+                  setStatus('创作中');
+                }
+              }}
+              min={0}
+              max={100}
+              step={5}
+              unit="%"
+              description="拖动滑动条调整创作完成度，点击右侧数值可直接键盘输入进度"
+            />
           </div>
 
           {/* Tags */}
@@ -1094,6 +1177,110 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                   恢复默认标签
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* Color Palette Module (Requirement 2: 色卡模块) */}
+          <div className="space-y-2.5 p-3.5 rounded-2xl bg-neutral-50 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38]">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                <Pipette className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                <span>作品配色色卡</span>
+                <span className="text-[11px] font-mono text-neutral-400 font-normal">
+                  ({colorPalette.length} 个色值)
+                </span>
+              </label>
+
+              {imageUrl && (
+                <button
+                  type="button"
+                  onClick={handleAutoExtractColors}
+                  style={{
+                    color: 'var(--accent-gold)',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                  }}
+                  className="text-[11px] font-medium px-2.5 py-1 rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 transition-all flex items-center gap-1 cursor-pointer"
+                  title="从当前上传的作品画面中自动提取主色调"
+                >
+                  <Wand2 className="w-3 h-3" />
+                  <span>智能提取色卡</span>
+                </button>
+              )}
+            </div>
+
+            {/* Existing Swatches Display & Delete Buttons */}
+            <div className="flex flex-wrap gap-2 p-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 min-h-[44px] items-center">
+              {colorPalette.length > 0 ? (
+                colorPalette.map((hex) => (
+                  <div
+                    key={hex}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-mono shadow-2xs group"
+                  >
+                    <span
+                      className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-inner shrink-0"
+                      style={{ backgroundColor: hex }}
+                    />
+                    <span className="text-neutral-800 dark:text-neutral-200 font-medium uppercase">{hex}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveColorSwatch(hex)}
+                      className="p-0.5 rounded-full text-neutral-400 hover:text-rose-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors ml-0.5 cursor-pointer"
+                      title={`删除色值 ${hex}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <span className="text-xs text-neutral-400 italic px-1 font-light">
+                  尚未添加配色色卡，可手动选择颜色或使用上方智能提取。
+                </span>
+              )}
+            </div>
+
+            {/* Add Swatch Control & Color Picker */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex-1">
+                <input
+                  type="color"
+                  value={newColorHex}
+                  onChange={(e) => setNewColorHex(e.target.value)}
+                  className="w-6 h-6 rounded-lg border-0 bg-transparent cursor-pointer p-0 shrink-0"
+                  title="点击打开拾色器"
+                />
+                <input
+                  type="text"
+                  value={newColorHex}
+                  onChange={(e) => setNewColorHex(e.target.value)}
+                  placeholder="#D4AF37"
+                  maxLength={7}
+                  className="w-full text-xs font-mono bg-transparent text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 focus:outline-none uppercase"
+                />
+              </div>
+
+              {/* Quick Presets */}
+              <div className="hidden sm:flex items-center gap-1 shrink-0">
+                {['#E63946', '#F4A261', '#2A9D8F', '#264653', '#D4AF37', '#8B5CF6'].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleAddColorSwatch(preset)}
+                    className="w-5 h-5 rounded-full border border-black/10 hover:scale-115 transition-transform cursor-pointer shadow-2xs"
+                    style={{ backgroundColor: preset }}
+                    title={`快捷添加 preset ${preset}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleAddColorSwatch()}
+                style={{ backgroundColor: 'var(--accent-gold)' }}
+                className="px-3 py-2 rounded-xl text-white text-xs font-semibold shrink-0 hover:opacity-90 active:scale-95 transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>添加色卡</span>
+              </button>
             </div>
           </div>
 

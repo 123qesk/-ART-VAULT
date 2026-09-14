@@ -21,9 +21,11 @@ import {
   Pipette,
   Copy,
   Plus,
-  Check
+  Check,
+  Sliders
 } from 'lucide-react';
 import { Artwork, DiaryEntry } from '../types';
+import { ThemeSlider } from './ThemeSlider';
 
 interface ArtworkDetailModalProps {
   artwork: Artwork | null;
@@ -60,8 +62,9 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   // Color Palette state
-  const [newColorHex, setNewColorHex] = useState('#E63946');
+  const [newColorHex, setNewColorHex] = useState('#FFFFFF');
   const [copiedColorHex, setCopiedColorHex] = useState<string | null>(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -70,6 +73,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
     setZoomLevel(1);
     setRotation(0);
     setPan({ x: 0, y: 0 });
+    setIsDescriptionExpanded(false);
   }, [artwork?.id]);
 
   // Keyboard navigation (left/right arrows, esc)
@@ -355,18 +359,23 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
       {/* Detail Metadata Sidebar (Right / Bottom) */}
       <div
         id="artwork-detail-sidebar"
-        className="w-full lg:w-96 shrink-0 h-[48vh] sm:h-[40vh] lg:h-full bg-[#15181F] border-t lg:border-t-0 lg:border-l border-neutral-800 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto"
+        style={{
+          backgroundColor: 'var(--card-bg)',
+          borderColor: 'var(--card-border)',
+          color: 'var(--text-main)',
+        }}
+        className="w-full lg:w-96 shrink-0 h-[48vh] sm:h-[40vh] lg:h-full border-t lg:border-t-0 lg:border-l p-4 sm:p-6 flex flex-col justify-between overflow-y-auto transition-colors duration-200"
       >
         <div className="space-y-6">
           {/* Title & Favorite */}
           <div>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-art-serif text-2xl font-bold text-white leading-tight">
+                <h2 style={{ color: 'var(--text-main)' }} className="font-art-serif text-2xl font-bold leading-tight">
                   {artwork.title}
                 </h2>
                 {artwork.fileName && (
-                  <span className="text-[11px] font-mono text-neutral-400 block mt-0.5">
+                  <span style={{ color: 'var(--text-muted)' }} className="text-[11px] font-mono block mt-0.5">
                     源文件: {artwork.fileName}
                   </span>
                 )}
@@ -376,10 +385,11 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                   <button
                     onClick={() => onTogglePin(artwork.id)}
                     style={{
-                      backgroundColor: artwork.isPinned ? 'var(--accent-gold)' : undefined,
+                      backgroundColor: artwork.isPinned ? 'var(--accent-gold)' : 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                      color: artwork.isPinned ? '#FFFFFF' : 'var(--text-muted)',
                     }}
-                    className={`p-2.5 rounded-full transition-all ${
-                      artwork.isPinned ? 'text-white shadow-xs' : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                    className={`p-2.5 rounded-full transition-all cursor-pointer ${
+                      artwork.isPinned ? 'shadow-xs' : 'hover:opacity-80'
                     }`}
                     title={artwork.isPinned ? '已置顶 (点击取消)' : '置顶本作品'}
                   >
@@ -388,10 +398,12 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                 )}
                 <button
                   onClick={() => onToggleFavorite(artwork.id)}
-                  className={`p-2.5 rounded-full transition-all ${
-                    artwork.isFavorite
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                  style={{
+                    backgroundColor: artwork.isFavorite ? '#F43F5E' : 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                    color: artwork.isFavorite ? '#FFFFFF' : 'var(--text-muted)',
+                  }}
+                  className={`p-2.5 rounded-full transition-all cursor-pointer ${
+                    artwork.isFavorite ? 'shadow-xs' : 'hover:opacity-80'
                   }`}
                   title={artwork.isFavorite ? '已收藏' : '加入收藏'}
                 >
@@ -399,13 +411,13 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                 </button>
               </div>
             </div>
-            <p className="text-xs text-neutral-400 font-mono mt-1">
+            <p style={{ color: 'var(--text-muted)' }} className="text-xs font-mono mt-1">
               创作于 {artwork.date}
             </p>
           </div>
 
           {/* Tags */}
-          <div className="pb-3 border-b" style={{ borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, #2a2e39)' }}>
+          <div className="pb-3 border-b" style={{ borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, var(--card-border))' }}>
             <div className="flex flex-wrap gap-1.5">
               {artwork.tags.map((tag, idx) => (
                 <span
@@ -413,7 +425,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                   style={{
                     color: 'var(--accent-gold)',
                     borderColor: 'color-mix(in srgb, var(--accent-gold) 45%, transparent)',
-                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, #181b22)',
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, var(--card-bg))',
                   }}
                   className="text-xs px-2.5 py-1 rounded-full font-mono border"
                 >
@@ -424,50 +436,89 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           </div>
 
           {/* Specification Grid */}
-          <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800 text-xs">
+          <div
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 5%, var(--card-bg))',
+              borderColor: 'var(--card-border)',
+            }}
+            className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl border text-xs"
+          >
             <div>
-              <span className="text-neutral-500 block">作品类型</span>
-              <span className="font-medium text-neutral-200 mt-0.5 block">{artwork.type}</span>
+              <span style={{ color: 'var(--text-muted)' }} className="block">作品类型</span>
+              <span style={{ color: 'var(--text-main)' }} className="font-medium mt-0.5 block">{artwork.type}</span>
             </div>
             <div>
-              <span className="text-neutral-500 block">原始尺寸</span>
-              <span className="font-mono text-neutral-200 mt-0.5 block">{artwork.width} × {artwork.height}</span>
+              <span style={{ color: 'var(--text-muted)' }} className="block">原始尺寸</span>
+              <span style={{ color: 'var(--text-main)' }} className="font-mono mt-0.5 block">{artwork.width} × {artwork.height}</span>
             </div>
             <div>
-              <span className="text-neutral-500 block">创作状态</span>
-              <span className="font-medium text-neutral-200 mt-0.5 block">
+              <span style={{ color: 'var(--text-muted)' }} className="block">创作状态</span>
+              <span style={{ color: 'var(--text-main)' }} className="font-medium mt-0.5 block">
                 {artwork.status}
               </span>
             </div>
             <div>
-              <span className="text-neutral-500 block">画质容量</span>
-              <span className="font-mono text-neutral-200 mt-0.5 block">
+              <span style={{ color: 'var(--text-muted)' }} className="block">画质容量</span>
+              <span style={{ color: 'var(--text-main)' }} className="font-mono mt-0.5 block">
                 {(artwork.sizeBytes / (1024 * 1024)).toFixed(2)} MB
               </span>
             </div>
           </div>
 
+          {/* Interactive Creation Progress Bar */}
+          <div>
+            <ThemeSlider
+              label="创作完成进度"
+              icon={<Sliders className="w-3.5 h-3.5" />}
+              value={typeof artwork.progress === 'number' ? artwork.progress : (artwork.status === '已完成' ? 100 : artwork.status === '草稿' ? 20 : 60)}
+              onChange={(newProg) => {
+                if (!artwork || !onUpdateArtwork) return;
+                const newStatus = newProg === 100 ? '已完成' : (artwork.status === '已完成' ? '创作中' : artwork.status);
+                onUpdateArtwork({
+                  ...artwork,
+                  progress: newProg,
+                  status: newStatus,
+                });
+              }}
+              min={0}
+              max={100}
+              step={5}
+              unit="%"
+              description="拖动滑动条调整创作进度，点击右侧数值可直接键盘输入自定义进度"
+            />
+          </div>
+
           {/* Color Palette Section */}
           <div className="space-y-2.5 pt-1">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 style={{ color: 'var(--text-muted)' }} className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                 <Pipette className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
                 作品配色色卡 ({(artwork.colorPalette || []).length})
               </h4>
               {copiedColorHex && (
-                <span className="text-[11px] font-mono font-medium text-emerald-400 flex items-center gap-1 animate-in fade-in duration-150">
+                <span className="text-[11px] font-mono font-medium text-emerald-500 flex items-center gap-1 animate-in fade-in duration-150">
                   <Check className="w-3 h-3" /> 已复制 {copiedColorHex}
                 </span>
               )}
             </div>
 
             {/* Swatches Grid */}
-            <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-neutral-900/60 border border-neutral-800">
+            <div
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 5%, var(--card-bg))',
+                borderColor: 'var(--card-border)',
+              }}
+              className="flex flex-wrap gap-2 p-3 rounded-2xl border"
+            >
               {(artwork.colorPalette || []).length > 0 ? (
                 (artwork.colorPalette || []).map((hex, idx) => (
                   <div
                     key={idx}
-                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 hover:border-amber-500/60 transition-all shadow-xs cursor-pointer"
+                    style={{
+                      backgroundColor: 'var(--card-bg)',
+                      borderColor: 'var(--card-border)',
+                    }}
+                    className="group relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border hover:border-amber-500/60 transition-all shadow-2xs cursor-pointer"
                     onClick={() => handleCopyColor(hex)}
                     title={`点击复制色值 ${hex}`}
                   >
@@ -475,7 +526,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                       className="w-4 h-4 rounded-full border border-black/20 shadow-inner shrink-0"
                       style={{ backgroundColor: hex }}
                     />
-                    <span className="text-xs font-mono text-neutral-200 uppercase font-medium">{hex}</span>
+                    <span style={{ color: 'var(--text-main)' }} className="text-xs font-mono uppercase font-medium">{hex}</span>
                     
                     <button
                       type="button"
@@ -483,7 +534,8 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                         e.stopPropagation();
                         handleRemoveColor(hex);
                       }}
-                      className="p-0.5 rounded-full text-neutral-500 hover:text-rose-400 hover:bg-neutral-800 transition-colors ml-0.5"
+                      style={{ color: 'var(--text-muted)' }}
+                      className="p-0.5 rounded-full hover:text-rose-500 transition-colors ml-0.5 cursor-pointer"
                       title="删除此色卡"
                     >
                       <X className="w-3 h-3" />
@@ -491,7 +543,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                   </div>
                 ))
               ) : (
-                <div className="text-xs text-neutral-500 py-1 font-light italic">
+                <div style={{ color: 'var(--text-muted)' }} className="text-xs py-1 font-light italic">
                   尚未添加配色色卡，可通过下方选择颜色并添加
                 </div>
               )}
@@ -499,7 +551,13 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
 
             {/* Add Color Controls */}
             <div className="flex items-center gap-2">
-              <div className="relative flex items-center gap-1.5 p-1 px-2 rounded-xl bg-neutral-900/80 border border-neutral-800 flex-1">
+              <div
+                style={{
+                  backgroundColor: 'var(--card-bg)',
+                  borderColor: 'var(--card-border)',
+                }}
+                className="relative flex items-center gap-1.5 p-1 px-2 rounded-xl border flex-1"
+              >
                 <input
                   type="color"
                   value={newColorHex}
@@ -513,7 +571,8 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                   onChange={(e) => setNewColorHex(e.target.value)}
                   placeholder="#E63946"
                   maxLength={7}
-                  className="w-full text-xs font-mono bg-transparent text-neutral-200 placeholder-neutral-600 focus:outline-none uppercase"
+                  style={{ color: 'var(--text-main)' }}
+                  className="w-full text-xs font-mono bg-transparent focus:outline-none uppercase"
                 />
               </div>
 
@@ -530,22 +589,67 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           </div>
 
           {/* Story / Description */}
-          {artwork.description && (
-            <div>
-              <h4 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" />
-                创作心得与说明
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 style={{ color: 'var(--text-muted)' }} className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
+                创作与说明
               </h4>
-              <p className="text-sm text-neutral-300 leading-relaxed font-light p-3 rounded-xl bg-neutral-900/40 border border-neutral-800/80">
-                {artwork.description}
-              </p>
+              {artwork.description && artwork.description.length > 70 && (
+                <button
+                  type="button"
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  style={{ color: 'var(--accent-gold)' }}
+                  className="text-[11px] font-medium hover:underline cursor-pointer flex items-center gap-1 transition-colors"
+                >
+                  {isDescriptionExpanded ? '收起' : '展开全文'}
+                </button>
+              )}
             </div>
-          )}
+
+            {artwork.description ? (
+              <div
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 5%, var(--card-bg))',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text-main)',
+                }}
+                className="p-3 rounded-xl border transition-all"
+              >
+                <p
+                  style={{
+                    display: isDescriptionExpanded ? 'block' : '-webkit-box',
+                    WebkitLineClamp: isDescriptionExpanded ? 'unset' : 4,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'anywhere',
+                  }}
+                  className="text-sm leading-relaxed font-light whitespace-pre-wrap select-text"
+                  title={!isDescriptionExpanded ? artwork.description : undefined}
+                >
+                  {artwork.description}
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 3%, var(--card-bg))',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text-muted)',
+                }}
+                className="p-3 rounded-xl border text-xs italic font-light"
+              >
+                暂无创作与说明备注
+              </div>
+            )}
+          </div>
 
           {/* Associated Diaries */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 style={{ color: 'var(--text-muted)' }} className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                 <BookPlus className="w-3.5 h-3.5" />
                 关联创作日志 ({relatedDiaries.length})
               </h4>
@@ -563,13 +667,17 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                 {relatedDiaries.map((diary) => (
                   <div
                     key={diary.id}
-                    className="p-3 rounded-xl bg-neutral-900/60 border border-neutral-800 text-xs space-y-1"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--accent-gold) 5%, var(--card-bg))',
+                      borderColor: 'var(--card-border)',
+                    }}
+                    className="p-3 rounded-xl border text-xs space-y-1"
                   >
-                    <div className="flex items-center justify-between font-medium text-neutral-200">
-                      <span>{diary.title}</span>
-                      <span className="text-neutral-500 font-mono text-[11px]">{diary.date}</span>
+                    <div className="flex items-center justify-between font-medium">
+                      <span style={{ color: 'var(--text-main)' }}>{diary.title}</span>
+                      <span style={{ color: 'var(--text-muted)' }} className="font-mono text-[11px]">{diary.date}</span>
                     </div>
-                    <p className="text-neutral-400 line-clamp-2 leading-relaxed font-light">
+                    <p style={{ color: 'var(--text-muted)' }} className="line-clamp-2 leading-relaxed font-light">
                       {diary.content}
                     </p>
                   </div>
@@ -579,10 +687,11 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
               <button
                 onClick={() => onAddDiaryForArtwork(artwork)}
                 style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 5%, var(--card-bg))',
                   borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
                   color: 'var(--accent-gold)',
                 }}
-                className="w-full text-xs italic p-3 rounded-xl bg-neutral-900/40 border border-dashed text-center hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full text-xs italic p-3 rounded-xl border border-dashed text-center hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <BookPlus className="w-3.5 h-3.5" />
                 尚未记录这幅画的日志，点击添加日记
@@ -594,12 +703,17 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
         {/* Action Buttons: Edit, Download, Delete */}
         <div 
           className="pt-6 border-t flex items-center gap-2"
-          style={{ borderColor: 'color-mix(in srgb, var(--accent-gold) 25%, #2a2e39)' }}
+          style={{ borderColor: 'color-mix(in srgb, var(--accent-gold) 25%, var(--card-border))' }}
         >
           <button
             id="btn-detail-edit"
             onClick={() => onEdit(artwork)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium text-neutral-200 transition-colors cursor-pointer"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+              color: 'var(--text-main)',
+              borderColor: 'var(--card-border)',
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors cursor-pointer hover:opacity-90"
           >
             <Edit3 className="w-4 h-4" />
             <span>编辑信息</span>
@@ -621,7 +735,11 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           <button
             id="btn-detail-delete"
             onClick={() => onDelete(artwork.id)}
-            className="p-2.5 rounded-xl bg-neutral-800 hover:bg-rose-600/80 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+              color: 'var(--text-muted)',
+            }}
+            className="p-2.5 rounded-xl hover:bg-rose-600/80 hover:text-white transition-colors cursor-pointer"
             title="移至回收站"
           >
             <Trash2 className="w-4 h-4" />

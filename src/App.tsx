@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -40,6 +40,11 @@ export default function App() {
     }, 2800);
   };
 
+  const selectedDetailRef = useRef<Artwork | null>(selectedArtworkDetail);
+  useEffect(() => {
+    selectedDetailRef.current = selectedArtworkDetail;
+  }, [selectedArtworkDetail]);
+
   // Load data from IndexedDB
   const refreshData = useCallback(async () => {
     try {
@@ -55,8 +60,8 @@ export default function App() {
       setStatuses(vaultDB.getStatuses());
 
       // If viewing detail of an artwork that was updated, update detail state
-      if (selectedArtworkDetail) {
-        const fresh = active.find((a) => a.id === selectedArtworkDetail.id);
+      if (selectedDetailRef.current) {
+        const fresh = active.find((a) => a.id === selectedDetailRef.current?.id);
         if (fresh) setSelectedArtworkDetail(fresh);
       }
     } catch (err) {
@@ -64,7 +69,11 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedArtworkDetail]);
+  }, []);
+
+  const favoriteArtworksList = useMemo(() => {
+    return artworks.filter((a) => a.isFavorite);
+  }, [artworks]);
 
   useEffect(() => {
     refreshData();
@@ -317,7 +326,7 @@ export default function App() {
 
           {(currentTab === 'gallery' || currentTab === 'favorites') && (
             <GalleryView
-              artworks={currentTab === 'favorites' ? artworks.filter((a) => a.isFavorite) : artworks}
+              artworks={currentTab === 'favorites' ? favoriteArtworksList : artworks}
               deletedArtworks={deletedArtworks}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -360,7 +369,12 @@ export default function App() {
           )}
 
           {currentTab === 'stats' && (
-            <StatsView artworks={artworks} diaries={diaries} statuses={statuses} />
+            <StatsView 
+              artworks={artworks} 
+              diaries={diaries} 
+              statuses={statuses} 
+              onSelectArtwork={(art) => setSelectedArtworkDetail(art)}
+            />
           )}
 
           {currentTab === 'settings' && (

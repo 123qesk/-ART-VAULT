@@ -25,10 +25,14 @@ import {
   Edit3,
   Play,
   VideoOff,
-  Film
+  Film,
+  Box,
+  SunMedium,
+  Minimize2
 } from 'lucide-react';
 import { ThemeMode, CustomThemeColors, DisplayMode, WallpaperConfig } from '../types';
 import { useTheme, BUILTIN_THEMES_DEFAULT } from '../context/ThemeContext';
+import { ThemeSlider } from './ThemeSlider';
 
 interface SettingsViewProps {
   onExportBackup: () => void;
@@ -118,9 +122,7 @@ const COLOR_PALETTE_PRESETS: { name: string; bgPage: string; cardBg: string; nav
 const MODULE_COLOR_PRESETS = [
   { name: '纯净雅白', cardBg: '#FFFFFF', cardBorder: '#E5E7EB' },
   { name: '象牙温润', cardBg: '#FFFDF9', cardBorder: '#E3DCD0' },
-  { name: '海盐太妃', cardBg: '#FBF6EE', cardBorder: '#EFE2D2' },
   { name: '云阶清灰', cardBg: '#F8FAFC', cardBorder: '#E2E8F0' },
-  { name: '燕麦暖杏', cardBg: '#FAF7F2', cardBorder: '#EBE3D7' },
   { name: '暖阳奶黄', cardBg: '#FEFCE8', cardBorder: '#FEF08A' },
   { name: '蜜桃甘露', cardBg: '#FFF7ED', cardBorder: '#FFEDD5' },
   { name: '薄樱暖粉', cardBg: '#FFF5F7', cardBorder: '#FCE7F0' },
@@ -133,9 +135,6 @@ const MODULE_COLOR_PRESETS = [
   { name: '远山黛蓝', cardBg: '#F0F4F8', cardBorder: '#D3DEEA' },
   { name: '雾霾烟蓝', cardBg: '#F1F5F9', cardBorder: '#CBD5E1' },
   { name: '深空暗灰', cardBg: '#1C2028', cardBorder: '#2E3544' },
-  { name: '青檀墨绿', cardBg: '#161E1A', cardBorder: '#24332C' },
-  { name: '曜石玄墨', cardBg: '#181B1E', cardBorder: '#292F36' },
-  { name: '黛黑深室', cardBg: '#141822', cardBorder: '#232A3B' },
 ];
 
 
@@ -161,6 +160,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     removeWallpaper,
     autoPlayMedia,
     setAutoPlayMedia,
+    fontSize,
+    setFontSize,
     savedPresets,
     activePresetId,
     addPreset,
@@ -580,6 +581,96 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </section>
 
+      {/* 5. Custom Font Size Adjustment Section */}
+      <section 
+        id="settings-font-size"
+        className="p-6 rounded-3xl border shadow-xs space-y-5"
+        style={{
+          backgroundColor: 'var(--card-bg)',
+          borderColor: 'var(--card-border)',
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+              <SlidersHorizontal className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+              <span>全站自定义字号大小</span>
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              根据视觉习惯调整基准字号，实时提升全站标题、画廊作品与日志的阅读舒适度。
+            </p>
+          </div>
+          <button
+            onClick={() => setFontSize(16)}
+            className="text-xs hover:text-amber-600 flex items-center gap-1 transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>重置为标准字号 (16px)</span>
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Preset Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { size: 13, label: '精细 (13px)' },
+              { size: 14, label: '紧凑 (14px)' },
+              { size: 16, label: '标准 (16px)' },
+              { size: 18, label: '大号 (18px)' },
+              { size: 20, label: '特大 (20px)' },
+            ].map((item) => (
+              <button
+                key={item.size}
+                onClick={() => setFontSize(item.size)}
+                style={{
+                  backgroundColor: fontSize === item.size
+                    ? 'var(--accent-gold)'
+                    : 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                  color: fontSize === item.size ? '#FFFFFF' : 'var(--text-main)',
+                  borderColor: fontSize === item.size ? 'var(--accent-gold)' : 'var(--card-border)',
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 shadow-2xs"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Slider Controls */}
+          <ThemeSlider
+            label="拖动滑块调整字号基准"
+            value={fontSize}
+            onChange={(val) => setFontSize(val)}
+            min={12}
+            max={22}
+            step={1}
+            unit="px"
+            showReset={true}
+            defaultValue={16}
+            onReset={() => setFontSize(16)}
+            description="拖动滑块调节基准字号，点击右侧数值可直接键盘输入自定义大小 (12px ~ 22px)"
+          />
+
+          {/* Live Text Preview Box */}
+          <div 
+            className="p-5 rounded-2xl border space-y-1.5 transition-all"
+            style={{ 
+              backgroundColor: 'var(--card-bg)', 
+              borderColor: 'var(--card-border)',
+              fontSize: `${fontSize}px` 
+            }}
+          >
+            <div className="font-art-serif font-bold tracking-wide" style={{ color: 'var(--text-main)' }}>
+              “画匣 · 灵感与时间的陈香”
+            </div>
+            <p className="text-[0.85em] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              实时字号预览：在此调控全站渲染尺寸，作品标题、标签提示与创作日志将自动依照此缩放比例舒展呈现。
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* 1 & 2. Theme Setting with Presets, Navbar & Module Custom Color Pickers */}
       <section 
         id="settings-theme-customizer"
@@ -783,7 +874,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             
             {/* 1. 主体模块（卡片）底色 */}
             <div 
-              className="p-3 rounded-xl border space-y-1.5 transition-all"
+              className="p-3 rounded-xl border space-y-1.5 transition-all focus-within:ring-1 focus-within:ring-[var(--accent-gold)] focus-within:border-[var(--accent-gold)]"
               style={{ 
                 backgroundColor: 'var(--card-bg)', 
                 borderColor: 'var(--accent-gold)',
@@ -816,7 +907,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   value={customColors.cardBg}
                   onChange={(e) => setCustomColors({ cardBg: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border focus:outline-none"
+                  className="w-full text-xs font-mono px-2 py-1 rounded border focus:outline-none focus:border-[var(--accent-gold)] transition-colors"
                   style={{ 
                     backgroundColor: 'var(--bg-page)', 
                     borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, var(--card-border))', 
@@ -828,7 +919,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {/* 2. 顶栏背景色 */}
             <div 
-              className="p-3 rounded-xl border space-y-1.5"
+              className="p-3 rounded-xl border space-y-1.5 transition-all hover:border-[var(--accent-gold)]/60 focus-within:ring-1 focus-within:ring-[var(--accent-gold)] focus-within:border-[var(--accent-gold)]"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
             >
               <label className="text-xs font-semibold block" style={{ color: 'var(--text-main)' }}>
@@ -845,7 +936,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   value={customColors.navbarBg || customColors.cardBg}
                   onChange={(e) => setCustomColors({ navbarBg: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border"
+                  className="w-full text-xs font-mono px-2 py-1 rounded border focus:outline-none focus:border-[var(--accent-gold)] transition-colors"
                   style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-main)' }}
                 />
               </div>
@@ -853,7 +944,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {/* 3. 页面底色 */}
             <div 
-              className="p-3 rounded-xl border space-y-1.5"
+              className="p-3 rounded-xl border space-y-1.5 transition-all hover:border-[var(--accent-gold)]/60 focus-within:ring-1 focus-within:ring-[var(--accent-gold)] focus-within:border-[var(--accent-gold)]"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
             >
               <label className="text-xs font-semibold block" style={{ color: 'var(--text-main)' }}>
@@ -870,7 +961,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   value={customColors.bgPage}
                   onChange={(e) => setCustomColors({ bgPage: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border"
+                  className="w-full text-xs font-mono px-2 py-1 rounded border focus:outline-none focus:border-[var(--accent-gold)] transition-colors"
                   style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-main)' }}
                 />
               </div>
@@ -878,7 +969,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {/* 4. 正文主字色 */}
             <div 
-              className="p-3 rounded-xl border space-y-1.5"
+              className="p-3 rounded-xl border space-y-1.5 transition-all hover:border-[var(--accent-gold)]/60 focus-within:ring-1 focus-within:ring-[var(--accent-gold)] focus-within:border-[var(--accent-gold)]"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
             >
               <label className="text-xs font-semibold block" style={{ color: 'var(--text-main)' }}>
@@ -895,7 +986,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   value={customColors.textMain}
                   onChange={(e) => setCustomColors({ textMain: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border"
+                  className="w-full text-xs font-mono px-2 py-1 rounded border focus:outline-none focus:border-[var(--accent-gold)] transition-colors"
                   style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-main)' }}
                 />
               </div>
@@ -903,7 +994,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {/* 5. 模块边框分割线 */}
             <div 
-              className="p-3 rounded-xl border space-y-1.5"
+              className="p-3 rounded-xl border space-y-1.5 transition-all hover:border-[var(--accent-gold)]/60 focus-within:ring-1 focus-within:ring-[var(--accent-gold)] focus-within:border-[var(--accent-gold)]"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
             >
               <label className="text-xs font-semibold block" style={{ color: 'var(--text-main)' }}>
@@ -920,7 +1011,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   value={customColors.cardBorder}
                   onChange={(e) => setCustomColors({ cardBorder: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border"
+                  className="w-full text-xs font-mono px-2 py-1 rounded border focus:outline-none focus:border-[var(--accent-gold)] transition-colors"
                   style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-main)' }}
                 />
               </div>
@@ -928,7 +1019,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {/* 6. 艺术强调色 */}
             <div 
-              className="p-3 rounded-xl border space-y-1.5"
+              className="p-3 rounded-xl border space-y-1.5 transition-all hover:border-[var(--accent-gold)]/60 focus-within:ring-1 focus-within:ring-[var(--accent-gold)] focus-within:border-[var(--accent-gold)]"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
             >
               <label className="text-xs font-semibold block" style={{ color: 'var(--text-main)' }}>
@@ -945,7 +1036,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   value={customColors.accentColor}
                   onChange={(e) => setCustomColors({ accentColor: e.target.value })}
-                  className="w-full text-xs font-mono px-2 py-1 rounded border"
+                  className="w-full text-xs font-mono px-2 py-1 rounded border focus:outline-none focus:border-[var(--accent-gold)] transition-colors"
                   style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-main)' }}
                 />
               </div>
@@ -956,46 +1047,226 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="space-y-4">
             {/* Style Selector */}
             <div 
-              className="p-5 rounded-2xl border space-y-3"
+              className="p-5 rounded-2xl border space-y-4"
               style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <label className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                     <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-                    <span>选择整体质感风格</span>
+                    <span>整体质感风格</span>
                   </label>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    实时切换全局视觉层级质感，毛玻璃与拟态风格已适配全站各个卡片与功能模块
+                    实时切换全局视觉层级质感，微光、毛玻璃、立体拟态与极简纯平已深度适配全站卡片与导航
                   </p>
                 </div>
+                <span 
+                  className="self-start sm:self-auto text-xs px-2.5 py-1 rounded-full font-mono font-medium border"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, transparent)',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                    color: 'var(--accent-gold)'
+                  }}
+                >
+                  当前：{
+                    customColors.themeStyle === 'glass' ? '毛玻璃 (Glass)' :
+                    customColors.themeStyle === 'neumorphism' ? '立体拟态 (Neumorphic)' :
+                    customColors.themeStyle === 'flat' ? '极简纯平 (Flat)' : '默认常规微光'
+                  }
+                </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+
+              {/* Enhanced Interactive 4 Styles Showcase */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
                 {[
-                  { id: 'default', label: '默认常规', desc: '精致微光阴影' },
-                  { id: 'glass', label: '毛玻璃 (Glass)', desc: '透光磨砂与镜面光晕' },
-                  { id: 'neumorphism', label: '拟态 (Neumorphic)', desc: '浮雕双向光影凸起' },
-                  { id: 'flat', label: '扁平极简 (Flat)', desc: '无阴影纯净利落' }
+                  { 
+                    id: 'default', 
+                    label: '默认常规', 
+                    enLabel: 'Default Elevation',
+                    desc: '细腻柔和微光与适度景深阴影，经久耐看',
+                    icon: SunMedium,
+                    renderPreview: (selected: boolean) => (
+                      <div 
+                        className="w-full h-12 rounded-lg border p-2 flex items-center justify-between transition-all"
+                        style={{
+                          backgroundColor: 'var(--card-bg)',
+                          borderColor: selected ? 'var(--accent-gold)' : 'var(--card-border)',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-gold)' }} />
+                          <span className="w-12 h-1.5 rounded-full opacity-60" style={{ backgroundColor: 'var(--text-main)' }} />
+                        </div>
+                        <span className="w-5 h-1.5 rounded-full opacity-40" style={{ backgroundColor: 'var(--text-muted)' }} />
+                      </div>
+                    )
+                  },
+                  { 
+                    id: 'glass', 
+                    label: '毛玻璃', 
+                    enLabel: 'Glassmorphism',
+                    desc: '双层高透模糊与镜面晶莹光晕，配合壁纸层次分明',
+                    icon: Layers,
+                    renderPreview: (selected: boolean) => (
+                      <div 
+                        className="relative w-full h-12 rounded-lg border p-2 flex items-center justify-between overflow-hidden transition-all"
+                        style={{
+                          backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, rgba(255, 255, 255, 0.2))',
+                          backdropFilter: 'blur(12px)',
+                          borderColor: selected ? 'var(--accent-gold)' : 'rgba(255, 255, 255, 0.5)',
+                          boxShadow: '0 8px 16px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.8)',
+                        }}
+                      >
+                        <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-gradient-to-br from-amber-400/40 to-transparent blur-xs pointer-events-none" />
+                        <div className="flex items-center gap-1.5 relative z-10">
+                          <span className="w-2.5 h-2.5 rounded-full ring-1 ring-white/80" style={{ backgroundColor: 'var(--accent-gold)' }} />
+                          <span className="w-12 h-1.5 rounded-full opacity-80 bg-white/70" />
+                        </div>
+                        <span className="w-5 h-1.5 rounded-full opacity-70 bg-white/50 relative z-10" />
+                      </div>
+                    )
+                  },
+                  { 
+                    id: 'neumorphism', 
+                    label: '立体拟态', 
+                    enLabel: 'Neumorphism',
+                    desc: '凸起与内嵌双向光影浮雕，极具触控实物触感',
+                    icon: Box,
+                    renderPreview: (selected: boolean) => (
+                      <div 
+                        className="w-full h-12 rounded-lg border p-2 flex items-center justify-between transition-all"
+                        style={{
+                          backgroundColor: 'color-mix(in srgb, var(--card-bg) 95%, #cbd5e1)',
+                          borderColor: selected ? 'var(--accent-gold)' : 'rgba(255, 255, 255, 0.65)',
+                          boxShadow: '3px 3px 8px rgba(0,0,0,0.12), -3px -3px 8px rgba(255,255,255,0.85)',
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span 
+                            className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold"
+                            style={{ 
+                              boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.2), inset -1px -1px 2px rgba(255,255,255,0.7)',
+                              color: 'var(--accent-gold)'
+                            }}
+                          >
+                            ●
+                          </span>
+                          <span className="w-12 h-1.5 rounded-full opacity-50" style={{ backgroundColor: 'var(--text-main)' }} />
+                        </div>
+                        <span 
+                          className="px-1.5 py-0.5 rounded text-[8px] font-mono"
+                          style={{ 
+                            boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.15), inset -1px -1px 2px rgba(255,255,255,0.8)',
+                            color: 'var(--text-muted)'
+                          }}
+                        >
+                          3D
+                        </span>
+                      </div>
+                    )
+                  },
+                  { 
+                    id: 'flat', 
+                    label: '极简纯平', 
+                    enLabel: 'Bauhaus Flat',
+                    desc: '彻底移除外阴影与光晕，极度清爽的纯色平面几何',
+                    icon: Minimize2,
+                    renderPreview: (selected: boolean) => (
+                      <div 
+                        className="w-full h-12 rounded-md border p-2 flex items-center justify-between transition-all"
+                        style={{
+                          backgroundColor: 'var(--card-bg)',
+                          borderColor: selected ? 'var(--accent-gold)' : 'var(--card-border)',
+                          boxShadow: 'none',
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-none border border-current" style={{ color: 'var(--accent-gold)' }} />
+                          <span className="w-12 h-1 rounded-none opacity-60" style={{ backgroundColor: 'var(--text-main)' }} />
+                        </div>
+                        <span className="w-5 h-1 rounded-none opacity-40" style={{ backgroundColor: 'var(--text-muted)' }} />
+                      </div>
+                    )
+                  }
                 ].map(style => {
                   const isSelected = (customColors.themeStyle || 'default') === style.id;
+                  const IconComp = style.icon;
                   return (
                     <button
                       key={style.id}
+                      type="button"
                       onClick={() => setCustomColors({ themeStyle: style.id as any })}
-                      className={`p-3 rounded-xl text-left transition-all border flex flex-col justify-between ${
-                        isSelected ? 'ring-2' : 'hover:border-amber-500/50'
+                      className={`p-3.5 rounded-2xl text-left transition-all border flex flex-col justify-between gap-2.5 cursor-pointer relative overflow-hidden group ${
+                        isSelected 
+                          ? 'shadow-md scale-[1.01]' 
+                          : 'hover:border-amber-500/50 hover:shadow-xs'
                       }`}
                       style={{
-                        backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))' : 'var(--bg-page)',
+                        backgroundColor: isSelected 
+                          ? 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))' 
+                          : 'var(--bg-page)',
                         borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
                         color: 'var(--text-main)',
+                        boxShadow: isSelected 
+                          ? '0 0 0 1.5px var(--accent-gold), 0 6px 18px color-mix(in srgb, var(--accent-gold) 15%, transparent)' 
+                          : undefined
                       }}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold">{style.label}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />}
+                      {/* Top Row: Icon + Name + Selection Indicator */}
+                      <div className="flex items-start justify-between gap-1 w-full">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="p-1.5 rounded-lg shrink-0 transition-colors"
+                            style={{
+                              backgroundColor: isSelected 
+                                ? 'var(--accent-gold)' 
+                                : 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                              color: isSelected ? '#FFFFFF' : 'var(--accent-gold)',
+                            }}
+                          >
+                            <IconComp className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold">{style.label}</span>
+                              <span 
+                                className="text-[9px] px-1 py-0.2 rounded font-medium"
+                                style={{
+                                  backgroundColor: isSelected
+                                    ? 'color-mix(in srgb, var(--accent-gold) 20%, transparent)'
+                                    : 'color-mix(in srgb, var(--text-muted) 12%, transparent)',
+                                  color: isSelected ? 'var(--accent-gold)' : 'var(--text-muted)',
+                                }}
+                              >
+                                {style.badge}
+                              </span>
+                            </div>
+                            <span className="text-[10px] block font-mono opacity-50" style={{ color: 'var(--text-muted)' }}>
+                              {style.enLabel}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isSelected ? (
+                          <div 
+                            className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-xs"
+                            style={{ backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' }}
+                          >
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border opacity-30 group-hover:opacity-60" style={{ borderColor: 'var(--card-border)' }} />
+                        )}
                       </div>
-                      <span className="text-[10px] mt-1 opacity-70" style={{ color: 'var(--text-muted)' }}>
+
+                      {/* Visual Texture Mini Preview */}
+                      <div className="w-full pt-0.5">
+                        {style.renderPreview(isSelected)}
+                      </div>
+
+                      {/* Description */}
+                      <span className="text-[11px] leading-relaxed opacity-75" style={{ color: 'var(--text-muted)' }}>
                         {style.desc}
                       </span>
                     </button>
@@ -1013,7 +1284,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div>
                   <h4 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                     <SlidersHorizontal className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-                    <span>各模块独立透明度自定义</span>
+                    <span>模块独立透明度自定义</span>
                   </h4>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     自由调整全站各个独立区域的透明度，配合自定义壁纸可获得通透半透明与层叠质感
@@ -1043,137 +1314,90 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
                 {/* 0. 页面底色透明度 */}
-                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>页面底色透明度</label>
-                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                      {customColors.pageOpacity !== undefined ? customColors.pageOpacity : 100}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={customColors.pageOpacity !== undefined ? customColors.pageOpacity : 100}
-                    onChange={(e) => setCustomColors({ pageOpacity: Number(e.target.value) })}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>网页最底层全屏背景色，调低可透出壁纸</span>
-                </div>
+                <ThemeSlider
+                  label="页面底色透明度"
+                  value={customColors.pageOpacity !== undefined ? customColors.pageOpacity : 100}
+                  onChange={(val) => setCustomColors({ pageOpacity: val })}
+                  min={0}
+                  max={100}
+                  step={5}
+                  unit="%"
+                  description="网页最底层全屏背景色，调低可透出壁纸"
+                />
 
                 {/* 1. 主体模块背景透明度 */}
-                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>主体模块背景透明度</label>
-                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                      {customColors.contentOpacity !== undefined ? customColors.contentOpacity : 100}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={customColors.contentOpacity !== undefined ? customColors.contentOpacity : 100}
-                    onChange={(e) => setCustomColors({ contentOpacity: Number(e.target.value) })}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>主体框架、作品分类栏、日记容器与模式选择</span>
-                </div>
+                <ThemeSlider
+                  label="主体模块背景透明度"
+                  value={customColors.contentOpacity !== undefined ? customColors.contentOpacity : 100}
+                  onChange={(val) => setCustomColors({ contentOpacity: val })}
+                  min={0}
+                  max={100}
+                  step={5}
+                  unit="%"
+                  description="主体框架、作品分类栏、日记容器与模式选择"
+                />
 
                 {/* 2. 模块与卡片 */}
-                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>模块卡片透明度</label>
-                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                      {customColors.cardOpacity !== undefined ? customColors.cardOpacity : 100}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={customColors.cardOpacity !== undefined ? customColors.cardOpacity : 100}
-                    onChange={(e) => setCustomColors({ cardOpacity: Number(e.target.value) })}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>画作卡片、日记模块与统计看板</span>
-                </div>
+                <ThemeSlider
+                  label="模块卡片透明度"
+                  value={customColors.cardOpacity !== undefined ? customColors.cardOpacity : 100}
+                  onChange={(val) => setCustomColors({ cardOpacity: val })}
+                  min={0}
+                  max={100}
+                  step={5}
+                  unit="%"
+                  description="画作卡片、日记模块与统计看板"
+                />
 
                 {/* 2. 顶部导航栏 */}
-                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>顶部导航栏透明度</label>
-                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                      {customColors.navbarOpacity !== undefined ? customColors.navbarOpacity : 100}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={customColors.navbarOpacity !== undefined ? customColors.navbarOpacity : 100}
-                    onChange={(e) => setCustomColors({ navbarOpacity: Number(e.target.value) })}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>顶部吸顶固定 Header 区域</span>
-                </div>
+                <ThemeSlider
+                  label="顶部导航栏透明度"
+                  value={customColors.navbarOpacity !== undefined ? customColors.navbarOpacity : 100}
+                  onChange={(val) => setCustomColors({ navbarOpacity: val })}
+                  min={0}
+                  max={100}
+                  step={5}
+                  unit="%"
+                  description="顶部吸顶固定 Header 区域"
+                />
 
                 {/* 3. 底部移动导航栏 (仅移动端显示) */}
-                <div className="p-3 rounded-xl border sm:hidden" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>移动端底栏透明度</label>
-                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                      {customColors.dockOpacity !== undefined ? customColors.dockOpacity : 100}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
+                <div className="sm:hidden">
+                  <ThemeSlider
+                    label="移动端底栏透明度"
                     value={customColors.dockOpacity !== undefined ? customColors.dockOpacity : 100}
-                    onChange={(e) => setCustomColors({ dockOpacity: Number(e.target.value) })}
-                    className="w-full accent-amber-500 cursor-pointer"
+                    onChange={(val) => setCustomColors({ dockOpacity: val })}
+                    min={0}
+                    max={100}
+                    step={5}
+                    unit="%"
+                    description="手机与窄屏端底部悬浮 Dock"
                   />
-                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>手机与窄屏端底部悬浮 Dock</span>
                 </div>
 
                 {/* 4. 搜索与输入框 */}
-                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>搜索与输入框透明度</label>
-                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                      {customColors.searchOpacity !== undefined ? customColors.searchOpacity : 90}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={customColors.searchOpacity !== undefined ? customColors.searchOpacity : 90}
-                    onChange={(e) => setCustomColors({ searchOpacity: Number(e.target.value) })}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>顶部搜索框与表单输入控件</span>
-                </div>
+                <ThemeSlider
+                  label="搜索与输入框透明度"
+                  value={customColors.searchOpacity !== undefined ? customColors.searchOpacity : 90}
+                  onChange={(val) => setCustomColors({ searchOpacity: val })}
+                  min={0}
+                  max={100}
+                  step={5}
+                  unit="%"
+                  description="顶部搜索框与表单输入控件"
+                />
 
                 {/* 6. 弹窗与浮层 */}
-                <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>弹窗与详情浮层透明度</label>
-                    <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                      {customColors.modalOpacity !== undefined ? customColors.modalOpacity : 98}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={customColors.modalOpacity !== undefined ? customColors.modalOpacity : 98}
-                    onChange={(e) => setCustomColors({ modalOpacity: Number(e.target.value) })}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
-                  <span className="text-[10px] block mt-1" style={{ color: 'var(--text-muted)' }}>添加/编辑画作弹窗与大图查看器</span>
-                </div>
+                <ThemeSlider
+                  label="弹窗与浮层透明度"
+                  value={customColors.modalOpacity !== undefined ? customColors.modalOpacity : 98}
+                  onChange={(val) => setCustomColors({ modalOpacity: val })}
+                  min={10}
+                  max={100}
+                  step={5}
+                  unit="%"
+                  description="添加/编辑画作弹窗与大图查看器"
+                />
               </div>
             </div>
           </div>
@@ -1532,42 +1756,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* 1. Opacity */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>壁纸不透明度</label>
-                  <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                    {wallpaper.opacity !== undefined ? wallpaper.opacity : 85}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="5"
-                  max="100"
-                  value={wallpaper.opacity !== undefined ? wallpaper.opacity : 85}
-                  onChange={(e) => setWallpaper({ ...wallpaper, opacity: Number(e.target.value) })}
-                  className="w-full accent-amber-500 cursor-pointer"
-                />
-                <span className="text-[10px] block" style={{ color: 'var(--text-muted)' }}>建议设置在 60% ~ 90% 以保持文字可读性</span>
-              </div>
+              <ThemeSlider
+                label="壁纸不透明度"
+                value={wallpaper.opacity !== undefined ? wallpaper.opacity : 85}
+                onChange={(val) => setWallpaper({ ...wallpaper, opacity: val })}
+                min={5}
+                max={100}
+                step={5}
+                unit="%"
+                description="建议设置在 60% ~ 90% 以保持文字可读性"
+              />
 
               {/* 2. Blur */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>高斯模糊度</label>
-                  <span className="text-[11px] font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
-                    {wallpaper.blur || 0}px
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="35"
-                  value={wallpaper.blur || 0}
-                  onChange={(e) => setWallpaper({ ...wallpaper, blur: Number(e.target.value) })}
-                  className="w-full accent-amber-500 cursor-pointer"
-                />
-                <span className="text-[10px] block" style={{ color: 'var(--text-muted)' }}>增加模糊可营造柔和的背景景深氛围</span>
-              </div>
+              <ThemeSlider
+                label="高斯模糊度"
+                value={wallpaper.blur || 0}
+                onChange={(val) => setWallpaper({ ...wallpaper, blur: val })}
+                min={0}
+                max={35}
+                step={1}
+                unit="px"
+                description="增加模糊可营造柔和的背景景深氛围"
+              />
 
               {/* 3. Fit Mode */}
               <div className="space-y-1.5">

@@ -462,6 +462,44 @@ class ArtVaultDatabase {
       console.error(e);
     }
   }
+
+  // Generic key-value settings store for IndexedDB (e.g. artist avatar, preferences)
+  async getSetting<T>(key: string): Promise<T | null> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('settings', 'readonly');
+        const store = tx.objectStore('settings');
+        const req = store.get(key);
+        req.onsuccess = () => {
+          if (req.result && req.result.value !== undefined) {
+            resolve(req.result.value as T);
+          } else {
+            resolve(null);
+          }
+        };
+        req.onerror = () => resolve(null);
+      });
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
+
+  async saveSetting(key: string, value: any): Promise<void> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('settings', 'readwrite');
+        const store = tx.objectStore('settings');
+        const req = store.put({ key, value });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
 }
 
 export const vaultDB = new ArtVaultDatabase();

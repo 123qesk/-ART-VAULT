@@ -18,11 +18,12 @@ interface StatsViewProps {
   artworks: Artwork[];
   diaries: DiaryEntry[];
   statuses?: StatusItem[];
+  onSelectArtwork?: (art: Artwork) => void;
 }
 
 type DateScopeMode = 'all' | 'year' | 'month' | 'day' | 'range';
 
-export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuses }) => {
+export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuses, onSelectArtwork }) => {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
   const todayStr = new Date().toISOString().split('T')[0];
@@ -602,6 +603,67 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             </div>
           )}
         </div>
+      </section>
+
+      {/* Requirement 2: Selected Date Artworks Module (所选日期作品模块) */}
+      <section style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-6 rounded-3xl border shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-art-serif text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <Calendar className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+              <span>所选区间作品展厅 ({filteredArtworks.length}件)</span>
+            </h3>
+            <p className="text-xs text-neutral-400 mt-0.5 font-mono">
+              {scopeMode === 'all' && '全部历史作品记录'}
+              {scopeMode === 'year' && `${selectedYear} 年度创作一览`}
+              {scopeMode === 'month' && `${selectedYear}年${selectedMonth}月 创作作品`}
+              {scopeMode === 'day' && `${selectedDay} 当天创作作品`}
+              {scopeMode === 'range' && `${startDate} 至 ${endDate} 区间作品`}
+            </p>
+          </div>
+        </div>
+
+        {filteredArtworks.length > 0 ? (
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3.5 pt-2">
+            {filteredArtworks.map((art) => (
+              <div
+                key={art.id}
+                onClick={() => onSelectArtwork && onSelectArtwork(art)}
+                className="group relative rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-md cursor-pointer flex flex-col"
+                style={{ backgroundColor: 'var(--content-bg)', borderColor: 'var(--card-border)' }}
+              >
+                <div className="aspect-square relative overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                  <img
+                    src={art.imageUrl}
+                    alt={art.title}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5">
+                    <span className="text-[10px] text-white/90 font-mono truncate">{art.date}</span>
+                  </div>
+                </div>
+                <div className="p-2.5 flex flex-col justify-between flex-1 space-y-1">
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate group-hover:text-amber-600 transition-colors">
+                    {art.title}
+                  </h4>
+                  <div className="flex items-center justify-between text-[10px] text-neutral-400">
+                    <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 truncate max-w-[70px]">
+                      {art.type}
+                    </span>
+                    <span className="font-mono">{art.width}×{art.height}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 rounded-2xl border border-dashed text-neutral-400 space-y-2" style={{ borderColor: 'var(--card-border)' }}>
+            <p className="text-xs">所选日期区间内暂无作品画稿</p>
+            <p className="text-[11px] text-neutral-400">试着切换上方“全部 / 年 / 月 / 日”筛选时间范围</p>
+          </div>
+        )}
       </section>
 
     </div>

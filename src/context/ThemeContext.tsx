@@ -100,6 +100,8 @@ interface ThemeContextType {
   removeWallpaper: () => Promise<void>;
   autoPlayMedia: boolean;
   setAutoPlayMedia: (enabled: boolean) => void;
+  fontSize: number;
+  setFontSize: (size: number) => void;
   // Saved custom theme presets
   savedPresets: ThemePreset[];
   activePresetId: string | null;
@@ -118,6 +120,7 @@ const AUTOPLAY_MEDIA_KEY = 'art_vault_autoplay_media_v1';
 const WALLPAPER_STORAGE_KEY = 'art_vault_wallpaper_state_v1';
 const THEME_PRESETS_KEY = 'art_vault_saved_presets_v1';
 const ACTIVE_PRESET_KEY = 'art_vault_active_preset_id_v1';
+const FONT_SIZE_KEY = 'art_vault_font_size_v1';
 
 const DEFAULT_WALLPAPER: WallpaperConfig = {
   type: 'none',
@@ -291,6 +294,30 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAutoPlayMediaState(enabled);
     localStorage.setItem(AUTOPLAY_MEDIA_KEY, JSON.stringify(enabled));
   };
+
+  // Granular font-size customization (12px to 22px, default 16px)
+  const [fontSize, setFontSizeState] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(FONT_SIZE_KEY);
+      if (saved) {
+        const num = parseInt(saved, 10);
+        if (!isNaN(num) && num >= 12 && num <= 24) return num;
+      }
+    }
+    return 16;
+  });
+
+  const setFontSize = (size: number) => {
+    const clamped = Math.min(Math.max(size, 12), 24);
+    setFontSizeState(clamped);
+    localStorage.setItem(FONT_SIZE_KEY, String(clamped));
+  };
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.fontSize = `${fontSize}px`;
+    root.style.setProperty('--app-font-size', `${fontSize}px`);
+  }, [fontSize]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -517,6 +544,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         removeWallpaper,
         autoPlayMedia,
         setAutoPlayMedia,
+        fontSize,
+        setFontSize,
         savedPresets,
         activePresetId,
         addPreset,

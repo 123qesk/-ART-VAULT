@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 
-export const WallpaperBackground: React.FC = () => {
+export const WallpaperBackground: React.FC = React.memo(() => {
   const { wallpaper } = useTheme();
 
   if (!wallpaper || wallpaper.type === 'none' || !wallpaper.url) {
@@ -51,4 +51,4 @@ export const WallpaperBackground: React.FC = () => {
       {/* Removed subtle contrast mask as requested */}
     </div>
   );
-};
+});

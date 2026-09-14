@@ -32,6 +32,7 @@ export interface Artwork {
   fileType?: 'image' | 'gif' | 'video' | 'psd' | 'ai'; // file format: image, animated gif, video, psd, ai
   fileName?: string;
   previewScale?: number; // scale percentage, e.g. 100 for 100%
+  progress?: number; // 0 - 100% creation completion progress
   isDeleted?: boolean;
   deletedAt?: string;
   colorPalette?: string[]; // Custom color palette swatches (e.g. ['#FF5733', '#2E4057'])

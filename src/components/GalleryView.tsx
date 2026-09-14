@@ -23,7 +23,9 @@ import {
   X,
   Check,
   CheckSquare,
-  Square
+  Square,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Artwork, GalleryLayoutMode, CategoryItem, StatusItem } from '../types';
 import { useTheme } from '../context/ThemeContext';
@@ -57,10 +59,10 @@ interface GalleryViewProps {
   onUpdateStatuses: (statuses: StatusItem[]) => void;
 }
 
-type DateFilter = 'all' | 'today' | '7days' | '30days' | 'year';
+type DateFilter = 'all' | 'today' | '7days' | '30days' | 'year' | 'custom';
 type SortOrder = 'pinned_first' | 'newest' | 'oldest' | 'title' | 'largest';
 
-const GalleryListRow: React.FC<{
+const GalleryListRowComponent: React.FC<{
   art: Artwork;
   onSelect: (art: Artwork) => void;
   onTogglePin?: (id: string) => void;
@@ -333,6 +335,8 @@ const GalleryListRow: React.FC<{
   );
 };
 
+const GalleryListRow = React.memo(GalleryListRowComponent);
+
 export const GalleryView: React.FC<GalleryViewProps> = ({
   artworks,
   deletedArtworks,
@@ -360,8 +364,29 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('');
+  const [tagSearchQuery, setTagSearchQuery] = useState<string>('');
+  const tagScrollRef = useRef<HTMLDivElement | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [customDate, setCustomDate] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('pinned_first');
+
+  // Timeline sub-layout (Requirement 3: 瀑布流/网格 vs 列表)
+  const [timelineSubLayout, setTimelineSubLayoutState] = useState<'grid' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('art_vault_timeline_sub_layout_v1');
+      if (saved === 'list' || saved === 'grid') return saved;
+    }
+    return 'grid';
+  });
+
+  const setTimelineSubLayout = (mode: 'grid' | 'list') => {
+    setTimelineSubLayoutState(mode);
+    try {
+      localStorage.setItem('art_vault_timeline_sub_layout_v1', mode);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Multi-select states
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -456,16 +481,31 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   // Extract all unique tags
   const allTags = useMemo(() => {
     const tagCountMap: Record<string, number> = {};
-    artworks.forEach((art) => {
-      art.tags.forEach((tag) => {
-        const clean = tag.replace(/^#/, '');
-        tagCountMap[clean] = (tagCountMap[clean] || 0) + 1;
+    const source = selectedCategory === 'trash' ? deletedArtworks : artworks;
+    source.forEach((art) => {
+      art.tags?.forEach((tag) => {
+        const clean = tag.replace(/^#/, '').trim();
+        if (clean) {
+          tagCountMap[clean] = (tagCountMap[clean] || 0) + 1;
+        }
       });
     });
-    return Object.entries(tagCountMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 15);
-  }, [artworks]);
+    return Object.entries(tagCountMap).sort((a, b) => b[1] - a[1]);
+  }, [artworks, deletedArtworks, selectedCategory]);
+
+  // Display tags filtered by quick search if entered
+  const displayTags = useMemo(() => {
+    if (!tagSearchQuery.trim()) return allTags;
+    const q = tagSearchQuery.trim().toLowerCase();
+    return allTags.filter(([t]) => t.toLowerCase().includes(q));
+  }, [allTags, tagSearchQuery]);
+
+  const scrollTags = (direction: 'left' | 'right') => {
+    if (tagScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -220 : 220;
+      tagScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   // Filter & Sort artworks
   const filteredArtworks = useMemo(() => {
@@ -518,6 +558,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         list = list.filter((a) => new Date(a.date) >= thirtyDaysAgo);
       } else if (dateFilter === 'year') {
         list = list.filter((a) => a.date.startsWith(thisYearStr));
+      } else if (dateFilter === 'custom' && customDate) {
+        list = list.filter((a) => a.date === customDate);
       }
     }
 
@@ -540,7 +582,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     });
 
     return list;
-  }, [artworks, deletedArtworks, selectedCategory, statusFilter, searchQuery, selectedTag, dateFilter, sortOrder]);
+  }, [artworks, deletedArtworks, selectedCategory, statusFilter, searchQuery, selectedTag, dateFilter, customDate, sortOrder]);
 
   // Batch Tag Editing State
   const [isBatchTagModalOpen, setIsBatchTagModalOpen] = useState(false);
@@ -910,7 +952,198 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
         </aside>
 
         {/* Right Main Gallery Wall */}
-        <main className="flex-1 w-full min-w-0 space-y-6">
+        <main className="flex-1 w-full min-w-0 space-y-5">
+          
+          {/* Top Tag Filter Bar (作品库顶部标签栏) */}
+          <div 
+            id="gallery-top-tag-bar"
+            style={{ 
+              backgroundColor: 'var(--content-bg)', 
+              borderColor: selectedTag ? 'var(--accent-gold)' : 'var(--card-border)',
+              boxShadow: selectedTag ? '0 0 0 1px color-mix(in srgb, var(--accent-gold) 35%, transparent)' : undefined
+            }}
+            className="p-3 sm:p-3.5 rounded-2xl border shadow-xs transition-all space-y-2.5"
+          >
+            {/* Tag Bar Header: Title, Counts, Search, Active Tag Pill & Clear */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div 
+                  className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                    color: 'var(--accent-gold)'
+                  }}
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs sm:text-sm font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
+                      作品标签栏
+                    </span>
+                    <span 
+                      className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-medium"
+                      style={{ 
+                        backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, transparent)',
+                        color: 'var(--accent-gold)'
+                      }}
+                    >
+                      {allTags.length} 个标签
+                    </span>
+                  </div>
+                  <span className="text-[10px] block opacity-60" style={{ color: 'var(--text-muted)' }}>
+                    点击标签一键检索对应画作
+                  </span>
+                </div>
+              </div>
+
+              {/* Controls: Search, Active Tag Pill & Scroll Arrows */}
+              <div className="flex items-center gap-2 ml-auto">
+                {allTags.length > 6 && (
+                  <div 
+                    className="relative flex items-center rounded-lg border px-2 py-1 text-xs"
+                    style={{ backgroundColor: 'var(--search-bg)', borderColor: 'var(--card-border)' }}
+                  >
+                    <Search className="w-3 h-3 mr-1 opacity-50 shrink-0" style={{ color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="检索标签..."
+                      value={tagSearchQuery}
+                      onChange={(e) => setTagSearchQuery(e.target.value)}
+                      className="w-20 sm:w-28 text-xs bg-transparent focus:outline-none"
+                      style={{ color: 'var(--text-main)' }}
+                    />
+                    {tagSearchQuery && (
+                      <button 
+                        type="button" 
+                        onClick={() => setTagSearchQuery('')}
+                        className="p-0.5 hover:text-rose-500 cursor-pointer"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {selectedTag && (
+                  <div className="flex items-center gap-1.5">
+                    <span 
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-mono font-bold border shadow-xs"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--accent-gold) 18%, var(--card-bg))',
+                        borderColor: 'var(--accent-gold)',
+                        color: 'var(--accent-gold)'
+                      }}
+                    >
+                      <Tag className="w-2.5 h-2.5" />
+                      <span>#{selectedTag}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTag('')}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border border-rose-200 dark:border-rose-900/40"
+                      title="清除标签筛选"
+                    >
+                      <X className="w-3 h-3" />
+                      <span className="hidden sm:inline">清除</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Left/Right Scroll Arrows */}
+                <div className="hidden sm:flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => scrollTags('left')}
+                    className="p-1.5 rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                    style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
+                    title="向左滚动"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollTags('right')}
+                    className="p-1.5 rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                    style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
+                    title="向右滚动"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Horizontal Scrollable Tags Pill Container */}
+            <div 
+              ref={tagScrollRef}
+              className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 touch-pan-x"
+            >
+              {/* All Artworks Pill */}
+              <button
+                type="button"
+                onClick={() => setSelectedTag('')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-all cursor-pointer border flex items-center gap-1.5 ${
+                  !selectedTag
+                    ? 'font-bold shadow-xs'
+                    : 'hover:border-amber-500/50 opacity-80 hover:opacity-100'
+                }`}
+                style={{
+                  backgroundColor: !selectedTag ? 'var(--accent-gold)' : 'var(--card-bg)',
+                  borderColor: !selectedTag ? 'var(--accent-gold)' : 'var(--card-border)',
+                  color: !selectedTag ? '#FFFFFF' : 'var(--text-main)',
+                }}
+              >
+                <span>全部作品</span>
+                <span className={`text-[10px] font-mono ${!selectedTag ? 'text-white/80' : 'opacity-60'}`}>
+                  ({selectedCategory === 'trash' ? deletedArtworks.length : artworks.length})
+                </span>
+              </button>
+
+              {/* Tag Pills */}
+              {displayTags.map(([tag, count]) => {
+                const isSelected = selectedTag === tag;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setSelectedTag(isSelected ? '' : tag)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono shrink-0 transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'font-bold shadow-sm ring-2 scale-[1.02]'
+                        : 'hover:border-amber-500/50 hover:scale-[1.02]'
+                    }`}
+                    style={{
+                      backgroundColor: isSelected ? 'var(--accent-gold)' : 'var(--card-bg)',
+                      borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+                      color: isSelected ? '#FFFFFF' : 'var(--text-main)',
+                      ringColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 35%, transparent)' : undefined,
+                    }}
+                  >
+                    <span>#{tag}</span>
+                    <span className={`text-[10px] ${isSelected ? 'text-white/85' : 'opacity-60'}`}>
+                      ({count})
+                    </span>
+                    {isSelected && (
+                      <X className="w-3 h-3 ml-0.5 hover:scale-125 transition-transform" />
+                    )}
+                  </button>
+                );
+              })}
+
+              {allTags.length === 0 && (
+                <span className="text-xs py-1 px-2" style={{ color: 'var(--text-muted)' }}>
+                  暂无作品标签。在添加或编辑作品时填写标签，便可在此处一键检索。
+                </span>
+              )}
+
+              {allTags.length > 0 && displayTags.length === 0 && (
+                <span className="text-xs py-1 px-2" style={{ color: 'var(--text-muted)' }}>
+                  未找到包含 "{tagSearchQuery}" 的标签
+                </span>
+              )}
+            </div>
+          </div>
           
           {/* Top Filter & Toolbar with Updated Title and 3 Layout Options */}
           <div 
@@ -926,15 +1159,37 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 <select
                   id="filter-date"
                   value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-                  style={{ backgroundColor: "var(--search-bg)" }} className="px-2.5 py-1.5 rounded-lg text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs"
+                  onChange={(e) => {
+                    const val = e.target.value as DateFilter;
+                    setDateFilter(val);
+                    if (val === 'custom' && !customDate) {
+                      setCustomDate(new Date().toISOString().split('T')[0]);
+                    }
+                  }}
+                  style={{ backgroundColor: "var(--search-bg)" }} 
+                  className="px-2.5 py-1.5 rounded-lg text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs font-medium"
                 >
                   <option value="all">全部日期</option>
                   <option value="today">今天</option>
                   <option value="7days">最近 7 天</option>
                   <option value="30days">最近 30 天</option>
                   <option value="year">今年</option>
+                  <option value="custom">📅 指定日期...</option>
                 </select>
+
+                {/* Custom Date Input Picker */}
+                {dateFilter === 'custom' && (
+                  <input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => {
+                      setCustomDate(e.target.value);
+                      setDateFilter('custom');
+                    }}
+                    style={{ backgroundColor: "var(--search-bg)", color: "var(--text-main)" }}
+                    className="px-2 py-1 rounded-lg border border-amber-500 focus:outline-none text-xs font-mono font-bold shadow-2xs"
+                  />
+                )}
               </div>
 
               {/* Status Filter (Dynamic custom statuses) */}
@@ -1419,93 +1674,157 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 </div>
               )}
 
-              {/* 3. TIMELINE LAYOUT (按年份与月份纵向排列) */}
+              {/* 3. TIMELINE LAYOUT (按年份与月份纵向排列，支持瀑布流与列表两种呈现形式) */}
               {layoutMode === 'timeline' && (
-                <div className="relative pl-5 sm:pl-8 space-y-8 py-2">
-                  {/* Vertical Timeline Guide Line */}
-                  <div 
-                    className="absolute left-2.5 sm:left-4 top-4 bottom-4 w-0.5 rounded-full"
-                    style={{
-                      background: 'linear-gradient(to bottom, var(--accent-gold), color-mix(in srgb, var(--accent-gold) 20%, transparent))',
-                    }}
-                  />
-
-                  {timelineGroups.map((group) => (
-                    <div key={group.title} className="relative space-y-4">
-                      {/* Month Header Node */}
-                      <div className="flex items-center gap-3 relative z-10">
-                        <div 
-                          className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 -ml-[23px] sm:-ml-[30px] shadow-xs"
-                          style={{
-                            backgroundColor: 'var(--card-bg)',
-                            borderColor: 'var(--accent-gold)',
-                          }}
-                        >
-                          <div 
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: 'var(--accent-gold)' }}
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <h3 
-                            className="font-art-serif text-base sm:text-lg font-bold tracking-wide"
-                            style={{ color: 'var(--text-main)' }}
-                          >
-                            {group.title}
-                          </h3>
-                          <span 
-                            className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-medium border"
-                            style={{
-                              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
-                              borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
-                              color: 'var(--accent-gold)',
-                            }}
-                          >
-                            {group.items.length} 件作品
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Artworks Grid inside Month */}
-                      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 sm:gap-5 items-stretch pl-1 sm:pl-2">
-                        {group.items.map((art) => (
-                          <ArtworkCard
-                            key={art.id}
-                            artwork={art}
-                            customStatuses={statuses}
-                            onClick={() => {
-                              if (isMultiSelectMode) {
-                                setSelectedArtworkIds((prev) =>
-                                  prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
-                                );
-                              } else {
-                                onSelectArtwork(art);
-                              }
-                            }}
-                            onToggleFavorite={(e) => {
-                              e.stopPropagation();
-                              onToggleFavorite(art.id);
-                            }}
-                            onTogglePin={(e) => {
-                              e.stopPropagation();
-                              onTogglePin(art.id);
-                            }}
-                            isSelectionMode={isMultiSelectMode}
-                            isSelected={selectedArtworkIds.includes(art.id)}
-                            onToggleSelect={() => {
-                              setSelectedArtworkIds((prev) =>
-                                prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
-                              );
-                            }}
-                            isTrashMode={selectedCategory === 'trash'}
-                            onRestore={() => onRestoreArtwork(art.id)}
-                            onPermanentDelete={() => onPermanentDeleteArtwork(art.id)}
-                          />
-                        ))}
-                      </div>
+                <div className="space-y-6">
+                  {/* Timeline Sub-Layout Toggle Header */}
+                  <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--card-border)' }}>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                      <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>创作脉络时间轴</span>
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full" style={{ backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))', color: 'var(--accent-gold)' }}>
+                        {filteredArtworks.length} 件作品
+                      </span>
                     </div>
-                  ))}
+
+                    <div className="flex items-center gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-800 border" style={{ borderColor: 'var(--card-border)' }}>
+                      <button
+                        onClick={() => setTimelineSubLayout('grid')}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                          timelineSubLayout === 'grid'
+                            ? 'bg-white dark:bg-neutral-700 text-amber-600 dark:text-amber-400 shadow-2xs font-bold'
+                            : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                        }`}
+                        title="时间轴瀑布流/网格平铺"
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                        <span>瀑布流</span>
+                      </button>
+                      <button
+                        onClick={() => setTimelineSubLayout('list')}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                          timelineSubLayout === 'list'
+                            ? 'bg-white dark:bg-neutral-700 text-amber-600 dark:text-amber-400 shadow-2xs font-bold'
+                            : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                        }`}
+                        title="时间轴极简纵向列表"
+                      >
+                        <List className="w-3.5 h-3.5" />
+                        <span>列表</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative pl-5 sm:pl-8 space-y-8 py-2">
+                    {/* Vertical Timeline Guide Line */}
+                    <div 
+                      className="absolute left-2.5 sm:left-4 top-4 bottom-4 w-0.5 rounded-full"
+                      style={{
+                        background: 'linear-gradient(to bottom, var(--accent-gold), color-mix(in srgb, var(--accent-gold) 20%, transparent))',
+                      }}
+                    />
+
+                    {timelineGroups.map((group) => (
+                      <div key={group.title} className="relative space-y-4">
+                        {/* Month Header Node */}
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div 
+                            className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 -ml-[23px] sm:-ml-[30px] shadow-xs"
+                            style={{
+                              backgroundColor: 'var(--card-bg)',
+                              borderColor: 'var(--accent-gold)',
+                            }}
+                          >
+                            <div 
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: 'var(--accent-gold)' }}
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <h3 
+                              className="font-art-serif text-base sm:text-lg font-bold tracking-wide"
+                              style={{ color: 'var(--text-main)' }}
+                            >
+                              {group.title}
+                            </h3>
+                            <span 
+                              className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-medium border"
+                              style={{
+                                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                                borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                                color: 'var(--accent-gold)',
+                              }}
+                            >
+                              {group.items.length} 件作品
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Timeline Items Mode: Waterfall Grid or List */}
+                        {timelineSubLayout === 'grid' ? (
+                          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 sm:gap-5 items-stretch pl-1 sm:pl-2">
+                            {group.items.map((art) => (
+                              <ArtworkCard
+                                key={art.id}
+                                artwork={art}
+                                customStatuses={statuses}
+                                onClick={() => {
+                                  if (isMultiSelectMode) {
+                                    setSelectedArtworkIds((prev) =>
+                                      prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
+                                    );
+                                  } else {
+                                    onSelectArtwork(art);
+                                  }
+                                }}
+                                onToggleFavorite={(e) => {
+                                  e.stopPropagation();
+                                  onToggleFavorite(art.id);
+                                }}
+                                onTogglePin={(e) => {
+                                  e.stopPropagation();
+                                  onTogglePin(art.id);
+                                }}
+                                isSelectionMode={isMultiSelectMode}
+                                isSelected={selectedArtworkIds.includes(art.id)}
+                                onToggleSelect={() => {
+                                  setSelectedArtworkIds((prev) =>
+                                    prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
+                                  );
+                                }}
+                                isTrashMode={selectedCategory === 'trash'}
+                                onRestore={() => onRestoreArtwork(art.id)}
+                                onPermanentDelete={() => onPermanentDeleteArtwork(art.id)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-3 pl-1 sm:pl-2">
+                            {group.items.map((art) => (
+                              <GalleryListRow
+                                key={art.id}
+                                art={art}
+                                onSelect={onSelectArtwork}
+                                onTogglePin={onTogglePin}
+                                onToggleFavorite={onToggleFavorite}
+                                isSelectionMode={isMultiSelectMode}
+                                isSelected={selectedArtworkIds.includes(art.id)}
+                                onToggleSelect={() => {
+                                  setSelectedArtworkIds((prev) =>
+                                    prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
+                                  );
+                                }}
+                                isTrashMode={selectedCategory === 'trash'}
+                                onRestore={(id) => onRestoreArtwork(id)}
+                                onPermanentDelete={(id) => onPermanentDeleteArtwork(id)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
