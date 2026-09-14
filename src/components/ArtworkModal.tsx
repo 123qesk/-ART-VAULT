@@ -865,10 +865,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                   id="modal-artwork-type"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  style={{ backgroundColor: "var(--search-bg)" }} className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
-                  style={{
-                    borderColor: 'var(--card-border)',
-                  }}
+                  style={{ backgroundColor: "var(--search-bg)", borderColor: 'var(--card-border)' }}
+                  className="w-full px-3.5 py-2 text-sm rounded-xl bg-neutral-100 dark:bg-[#12141A] border border-neutral-200 dark:border-[#262B38] text-neutral-900 dark:text-neutral-100 focus:outline-none"
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.name}>

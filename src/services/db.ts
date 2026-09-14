@@ -163,6 +163,24 @@ class ArtVaultDatabase {
     });
   }
 
+  async batchSoftDeleteArtworks(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      await this.softDeleteArtwork(id);
+    }
+  }
+
+  async batchRestoreArtworks(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      await this.restoreArtwork(id);
+    }
+  }
+
+  async batchPermanentDeleteArtworks(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      await this.permanentDeleteArtwork(id);
+    }
+  }
+
   async emptyRecycleBin(): Promise<void> {
     const all = await this.getAllArtworks(true);
     const deleted = all.filter((a) => a.isDeleted);

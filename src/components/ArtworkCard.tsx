@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
-import { Heart, Pin, Calendar, Eye } from 'lucide-react';
+import { Heart, Pin, Calendar, Eye, Check, RotateCcw, Trash2 } from 'lucide-react';
 import { Artwork, StatusItem } from '../types';
 
 interface ArtworkCardProps {
   artwork: Artwork;
   onClick: () => void;
-  onToggleFavorite: (e: React.MouseEvent) => void;
+  onToggleFavorite?: (e: React.MouseEvent) => void;
   onTogglePin?: (e: React.MouseEvent) => void;
   customStatuses?: StatusItem[];
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (e: React.MouseEvent) => void;
+  isTrashMode?: boolean;
+  onRestore?: (e: React.MouseEvent) => void;
+  onPermanentDelete?: (e: React.MouseEvent) => void;
 }
 
 export const ArtworkCard: React.FC<ArtworkCardProps> = ({
@@ -16,6 +22,12 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
   onToggleFavorite,
   onTogglePin,
   customStatuses,
+  isSelectionMode,
+  isSelected,
+  onToggleSelect,
+  isTrashMode,
+  onRestore,
+  onPermanentDelete,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -69,22 +81,32 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
   return (
     <div
       id={`artwork-card-${artwork.id}`}
-      onClick={onClick}
+      onClick={(e) => {
+        if (isSelectionMode && onToggleSelect) {
+          onToggleSelect(e);
+        } else {
+          onClick();
+        }
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
         backgroundColor: 'var(--card-bg)',
-        borderColor: (isHovered || artwork.isPinned) ? 'var(--accent-gold)' : 'var(--card-border)',
-        boxShadow: isHovered
+        borderColor: (isSelected || isHovered || artwork.isPinned) ? 'var(--accent-gold)' : 'var(--card-border)',
+        boxShadow: isSelected
+          ? '0 0 0 2px var(--accent-gold), 0 10px 25px -5px color-mix(in srgb, var(--accent-gold) 30%, transparent)'
+          : isHovered
           ? '0 12px 28px -4px color-mix(in srgb, var(--accent-gold) 25%, transparent), 0 0 0 1.5px var(--accent-gold)'
           : artwork.isPinned
           ? '0 0 0 1.5px var(--accent-gold)'
           : undefined,
       }}
-      className="masonry-item group relative flex flex-col h-full rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer transform hover:-translate-y-1 shadow-xs"
+      className={`masonry-item group relative flex flex-col h-full rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer transform hover:-translate-y-1 shadow-xs ${
+        isSelected ? 'bg-amber-500/5' : ''
+      }`}
     >
-      {/* Artwork Image Container with shorter, refined aspect ratio */}
-      <div className="relative w-full aspect-[16/9] overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
+      {/* Artwork Image Container with balanced 4/3 mobile ratio */}
+      <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
         <div className="w-full h-full overflow-hidden flex items-center justify-center">
           <img
             src={artwork.imageUrl}
@@ -97,17 +119,39 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
           />
         </div>
 
+        {/* Selection Checkbox Overlay */}
+        {isSelectionMode && (
+          <div className="absolute top-2 left-2 z-20 pointer-events-auto">
+            <div
+              className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all shadow-md ${
+                isSelected
+                  ? 'bg-amber-500 border-amber-500 text-white scale-105'
+                  : 'bg-black/40 border-white/80 text-transparent hover:border-white'
+              }`}
+            >
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            </div>
+          </div>
+        )}
+
         {/* Top Floating Badges */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className={`flex items-center gap-1.5 flex-wrap ${isSelectionMode ? 'ml-7' : ''}`}>
             {/* Pinned Badge */}
-            {artwork.isPinned && (
+            {artwork.isPinned && !isTrashMode && (
               <span 
                 className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md text-white shadow-sm pointer-events-auto"
                 style={{ backgroundColor: 'var(--accent-gold)' }}
               >
                 <Pin className="w-3 h-3 fill-current" />
                 置顶
+              </span>
+            )}
+
+            {/* Trash Badge */}
+            {isTrashMode && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-600/90 backdrop-blur-md text-white shadow-xs">
+                已删除
               </span>
             )}
 
@@ -129,41 +173,76 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1 pointer-events-auto">
-            {/* Quick Pin Toggle button */}
-            {onTogglePin && (
-              <button
-                type="button"
-                onClick={onTogglePin}
-                aria-label={artwork.isPinned ? '取消置顶' : '置顶作品'}
-                title={artwork.isPinned ? '取消置顶' : '置顶作品'}
-                style={{
-                  backgroundColor: artwork.isPinned ? 'var(--accent-gold)' : undefined,
-                }}
-                className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 ${
-                  artwork.isPinned
-                    ? 'text-white shadow-sm scale-105'
-                    : 'bg-black/30 hover:bg-black/60 text-white/80 hover:text-white opacity-80 sm:opacity-0 sm:group-hover:opacity-100'
-                }`}
-              >
-                <Pin className={`w-3.5 h-3.5 ${artwork.isPinned ? 'fill-current' : ''}`} />
-              </button>
-            )}
+          {!isSelectionMode && (
+            <div className="flex items-center gap-1 pointer-events-auto">
+              {/* Single Restore Button for Recycle Bin */}
+              {isTrashMode && onRestore && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRestore(e);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-all active:scale-95"
+                  title="恢复作品"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>恢复</span>
+                </button>
+              )}
 
-            {/* Favorite button */}
-            <button
-              type="button"
-              onClick={onToggleFavorite}
-              aria-label={artwork.isFavorite ? '取消收藏' : '加入收藏'}
-              className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 ${
-                artwork.isFavorite
-                  ? 'bg-rose-500/90 text-white shadow-sm scale-105'
-                  : 'bg-black/30 hover:bg-black/60 text-white/80 hover:text-white'
-              }`}
-            >
-              <Heart className={`w-4 h-4 ${artwork.isFavorite ? 'fill-current' : ''}`} />
-            </button>
-          </div>
+              {/* Permanent Delete Button for Recycle Bin */}
+              {isTrashMode && onPermanentDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPermanentDelete(e);
+                  }}
+                  className="p-1.5 rounded-full bg-rose-600/80 hover:bg-rose-600 text-white shadow-md transition-all active:scale-95"
+                  title="彻底删除"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Quick Pin Toggle button */}
+              {!isTrashMode && onTogglePin && (
+                <button
+                  type="button"
+                  onClick={onTogglePin}
+                  aria-label={artwork.isPinned ? '取消置顶' : '置顶作品'}
+                  title={artwork.isPinned ? '取消置顶' : '置顶作品'}
+                  style={{
+                    backgroundColor: artwork.isPinned ? 'var(--accent-gold)' : undefined,
+                  }}
+                  className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 ${
+                    artwork.isPinned
+                      ? 'text-white shadow-sm scale-105'
+                      : 'bg-black/30 hover:bg-black/60 text-white/80 hover:text-white opacity-80 sm:opacity-0 sm:group-hover:opacity-100'
+                  }`}
+                >
+                  <Pin className={`w-3.5 h-3.5 ${artwork.isPinned ? 'fill-current' : ''}`} />
+                </button>
+              )}
+
+              {/* Favorite button */}
+              {!isTrashMode && onToggleFavorite && (
+                <button
+                  type="button"
+                  onClick={onToggleFavorite}
+                  aria-label={artwork.isFavorite ? '取消收藏' : '加入收藏'}
+                  className={`p-1.5 rounded-full backdrop-blur-md transition-all duration-200 ${
+                    artwork.isFavorite
+                      ? 'bg-rose-500/90 text-white shadow-sm scale-105'
+                      : 'bg-black/30 hover:bg-black/60 text-white/80 hover:text-white'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${artwork.isFavorite ? 'fill-current' : ''}`} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Hover Quick View Overlay */}

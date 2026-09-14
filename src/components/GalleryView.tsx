@@ -20,7 +20,10 @@ import {
   Settings2,
   ChevronDown,
   Filter,
-  X
+  X,
+  Check,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { Artwork, GalleryLayoutMode, CategoryItem, StatusItem } from '../types';
 import { ArtworkCard } from './ArtworkCard';
@@ -38,6 +41,9 @@ interface GalleryViewProps {
   onDeleteArtwork: (id: string) => void;
   onRestoreArtwork: (id: string) => void;
   onPermanentDeleteArtwork: (id: string) => void;
+  onBatchSoftDelete?: (ids: string[]) => void;
+  onBatchRestore?: (ids: string[]) => void;
+  onBatchPermanentDelete?: (ids: string[]) => void;
   onEmptyRecycleBin: () => void;
   onOpenAddModal: () => void;
   categories: CategoryItem[];
@@ -52,27 +58,69 @@ type SortOrder = 'pinned_first' | 'newest' | 'oldest' | 'title' | 'largest';
 const GalleryListRow: React.FC<{
   art: Artwork;
   onSelect: (art: Artwork) => void;
-  onTogglePin: (id: string) => void;
-  onToggleFavorite: (id: string) => void;
-}> = ({ art, onSelect, onTogglePin, onToggleFavorite }) => {
+  onTogglePin?: (id: string) => void;
+  onToggleFavorite?: (id: string) => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+  isTrashMode?: boolean;
+  onRestore?: (id: string) => void;
+  onPermanentDelete?: (id: string) => void;
+}> = ({ 
+  art, 
+  onSelect, 
+  onTogglePin, 
+  onToggleFavorite,
+  isSelectionMode,
+  isSelected,
+  onToggleSelect,
+  isTrashMode,
+  onRestore,
+  onPermanentDelete
+}) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div
-      onClick={() => onSelect(art)}
+      onClick={() => {
+        if (isSelectionMode && onToggleSelect) {
+          onToggleSelect();
+        } else {
+          onSelect(art);
+        }
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
         backgroundColor: 'var(--card-bg)',
-        borderColor: (isHovered || art.isPinned) ? 'var(--accent-gold)' : 'var(--card-border)',
-        boxShadow: isHovered
+        borderColor: (isSelected || isHovered || art.isPinned) ? 'var(--accent-gold)' : 'var(--card-border)',
+        boxShadow: isSelected
+          ? '0 0 0 2px var(--accent-gold), 0 8px 24px -4px color-mix(in srgb, var(--accent-gold) 25%, transparent)'
+          : isHovered
           ? '0 10px 26px -4px color-mix(in srgb, var(--accent-gold) 22%, transparent), 0 0 0 1.5px var(--accent-gold)'
           : art.isPinned
           ? '0 0 0 1.5px var(--accent-gold)'
           : undefined,
       }}
-      className="group relative flex flex-row items-center gap-3 sm:gap-4 p-2.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
+      className={`group relative flex flex-row items-center gap-3 sm:gap-4 p-2.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
+        isSelected ? 'bg-amber-500/5' : ''
+      }`}
     >
+      {/* Checkbox for Multi-select */}
+      {isSelectionMode && (
+        <div className="shrink-0 flex items-center justify-center pl-1">
+          <div
+            className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${
+              isSelected
+                ? 'bg-amber-500 border-amber-500 text-white'
+                : 'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 text-transparent'
+            }`}
+          >
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          </div>
+        </div>
+      )}
+
       {/* Left Thumbnail */}
       <div className="relative w-20 h-20 sm:w-40 sm:h-28 shrink-0 rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#12141A]">
         {art.mediaType === 'video' || art.fileType === 'video' ? (
@@ -94,12 +142,17 @@ const GalleryListRow: React.FC<{
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         )}
-        {art.isPinned && (
+        {art.isPinned && !isTrashMode && (
           <span 
             style={{ backgroundColor: 'var(--accent-gold)' }}
             className="absolute top-1 left-1 sm:top-2 sm:left-2 inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded text-white shadow-xs"
           >
             <Pin className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-current" /> <span className="hidden xs:inline">置顶</span>
+          </span>
+        )}
+        {isTrashMode && (
+          <span className="absolute top-1 left-1 sm:top-2 sm:left-2 inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded bg-rose-600 text-white shadow-xs">
+            已删除
           </span>
         )}
         {art.fileType === 'video' && (
@@ -150,33 +203,67 @@ const GalleryListRow: React.FC<{
               </span>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                onClick={() => onTogglePin(art.id)}
-                style={{
-                  backgroundColor: art.isPinned ? 'var(--accent-gold)' : undefined,
-                  borderColor: art.isPinned ? 'var(--accent-gold)' : isHovered ? 'var(--accent-gold)' : undefined,
-                  color: art.isPinned ? '#FFFFFF' : isHovered ? 'var(--accent-gold)' : undefined,
-                }}
-                className={`p-1.5 sm:p-2 rounded-xl border transition-all ${
-                  art.isPinned ? 'shadow-xs' : 'text-neutral-400 hover:text-white border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                }`}
-                title={art.isPinned ? '取消置顶' : '置顶本作品'}
-              >
-                <Pin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${art.isPinned ? 'fill-current' : ''}`} />
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleFavorite(art.id)}
-                className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${
-                  art.isFavorite ? 'bg-rose-500 text-white border-rose-500 shadow-xs' : 'text-neutral-400 hover:text-rose-500 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                }`}
-                title={art.isFavorite ? '已收藏' : '加入收藏'}
-              >
-                <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${art.isFavorite ? 'fill-current' : ''}`} />
-              </button>
-            </div>
+            {!isSelectionMode && (
+              <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                {isTrashMode ? (
+                  <>
+                    {onRestore && (
+                      <button
+                        type="button"
+                        onClick={() => onRestore(art.id)}
+                        className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1 shadow-xs transition-colors"
+                        title="恢复作品"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>恢复</span>
+                      </button>
+                    )}
+                    {onPermanentDelete && (
+                      <button
+                        type="button"
+                        onClick={() => onPermanentDelete(art.id)}
+                        className="p-1.5 rounded-xl bg-rose-600/10 hover:bg-rose-600 text-rose-600 hover:text-white text-xs font-medium transition-colors"
+                        title="彻底删除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {onTogglePin && (
+                      <button
+                        type="button"
+                        onClick={() => onTogglePin(art.id)}
+                        style={{
+                          backgroundColor: art.isPinned ? 'var(--accent-gold)' : undefined,
+                          borderColor: art.isPinned ? 'var(--accent-gold)' : isHovered ? 'var(--accent-gold)' : undefined,
+                          color: art.isPinned ? '#FFFFFF' : isHovered ? 'var(--accent-gold)' : undefined,
+                        }}
+                        className={`p-1.5 sm:p-2 rounded-xl border transition-all ${
+                          art.isPinned ? 'shadow-xs' : 'text-neutral-400 hover:text-white border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                        }`}
+                        title={art.isPinned ? '取消置顶' : '置顶本作品'}
+                      >
+                        <Pin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${art.isPinned ? 'fill-current' : ''}`} />
+                      </button>
+                    )}
+                    {onToggleFavorite && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleFavorite(art.id)}
+                        className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${
+                          art.isFavorite ? 'bg-rose-500 text-white border-rose-500 shadow-xs' : 'text-neutral-400 hover:text-rose-500 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                        }`}
+                        title={art.isFavorite ? '已收藏' : '加入收藏'}
+                      >
+                        <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${art.isFavorite ? 'fill-current' : ''}`} />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {art.description ? (
@@ -249,6 +336,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   onDeleteArtwork,
   onRestoreArtwork,
   onPermanentDeleteArtwork,
+  onBatchSoftDelete,
+  onBatchRestore,
+  onBatchPermanentDelete,
   onEmptyRecycleBin,
   onOpenAddModal,
   categories,
@@ -263,12 +353,22 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('pinned_first');
 
+  // Multi-select states
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedArtworkIds, setSelectedArtworkIds] = useState<string[]>([]);
+
   // Layout states (Requirement 3 & 4)
   const [layoutMode, setLayoutMode] = useState<GalleryLayoutMode>('masonry'); // 'masonry' | 'list'
   const [masonryColumns, setMasonryColumns] = useState<1 | 2 | 3 | 4>(3);
   const [showMasonryDropdown, setShowMasonryDropdown] = useState(false);
   const [isMobileFilterDrawerOpen, setIsMobileFilterDrawerOpen] = useState(false);
   const masonryDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Clear selection on category change
+  useEffect(() => {
+    setSelectedArtworkIds([]);
+    setIsMultiSelectMode(false);
+  }, [selectedCategory]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -705,11 +805,29 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               </div>
             </div>
 
-            {/* Right: Results Count & Layout Switcher (瀑布流 / 列表 / 自定义) */}
-            <div className="flex items-center gap-3">
+            {/* Right: Results Count & Layout Switcher & Multi-select */}
+            <div className="flex items-center gap-2 sm:gap-3">
               <span className="text-xs text-neutral-400 font-mono hidden sm:inline">
                 {filteredArtworks.length} 件作品
               </span>
+
+              {/* Multi-select Toggle Button */}
+              <button
+                id="btn-toggle-multiselect"
+                onClick={() => {
+                  setIsMultiSelectMode((prev) => !prev);
+                  setSelectedArtworkIds([]);
+                }}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  isMultiSelectMode
+                    ? 'bg-amber-500 text-white shadow-md'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                }`}
+                title="多选批量处理"
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>{isMultiSelectMode ? '取消多选' : '多选'}</span>
+              </button>
 
               {/* Layout Switcher (Clean Icon-Only & Toggle Dropdown on Masonry Click) */}
               <div 
@@ -759,13 +877,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                       backgroundColor: 'var(--content-bg)',
                       borderColor: 'var(--card-border)',
                     }}
-                    className="absolute top-full right-0 sm:left-0 sm:right-auto mt-2 py-2 px-1.5 rounded-xl border shadow-xl z-40 min-w-[130px] animate-in fade-in zoom-in-95 duration-150"
+                    className="absolute top-full right-0 sm:left-0 sm:right-auto mt-2 py-2 px-1.5 rounded-xl border shadow-xl z-40 min-w-[100px] animate-in fade-in zoom-in-95 duration-150"
                   >
                     <div 
                       style={{ color: 'var(--text-muted)' }}
-                      className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider border-b border-black/5 dark:border-white/5 mb-1"
+                      className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider border-b border-black/5 dark:border-white/5 mb-1"
                     >
-                      瀑布流列数
+                      列数切换
                     </div>
                     <div className="space-y-0.5">
                       {([1, 2, 3, 4] as const).map((cols) => (
@@ -774,22 +892,22 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                           onClick={() => {
                             setMasonryColumns(cols);
                             setLayoutMode('masonry');
-                            setShowMasonryDropdown(false); // Hide upon selection!
+                            setShowMasonryDropdown(false);
                           }}
                           style={{
                             color: masonryColumns === cols && layoutMode === 'masonry' ? 'var(--accent-gold)' : 'var(--text-main)',
                           }}
                           className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            cols === 4 ? 'hidden sm:flex' : 'flex'
+                          } ${
                             masonryColumns === cols && layoutMode === 'masonry'
                               ? 'bg-amber-500/10 font-bold'
                               : 'hover:bg-black/5 dark:hover:bg-white/5'
                           }`}
                         >
-                          <span className="flex items-center gap-1.5">
-                            <span className="font-mono font-semibold">{cols}</span> 列{cols === 1 ? ' (单张大图)' : cols === 2 ? ' (双栏精选)' : cols === 3 ? ' (标准三栏)' : ' (紧凑多栏)'}
-                          </span>
+                          <span className="font-mono font-semibold">{cols}列</span>
                           {masonryColumns === cols && layoutMode === 'masonry' && (
-                            <span className="text-amber-600 dark:text-amber-400 text-xs">✓</span>
+                            <span className="text-amber-600 dark:text-amber-400 text-xs ml-2">✓</span>
                           )}
                         </button>
                       ))}
@@ -800,21 +918,136 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
             </div>
           </div>
 
+          {/* Sticky Multi-Select Toolbar Floating Overlay */}
+          {isMultiSelectMode && (
+            <div 
+              style={{
+                backgroundColor: 'var(--card-bg)',
+                borderColor: 'var(--accent-gold)',
+              }}
+              className="sticky top-2 z-30 p-3 sm:p-4 rounded-2xl border-2 shadow-xl flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    if (selectedArtworkIds.length === filteredArtworks.length && filteredArtworks.length > 0) {
+                      setSelectedArtworkIds([]);
+                    } else {
+                      setSelectedArtworkIds(filteredArtworks.map((a) => a.id));
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors"
+                >
+                  {selectedArtworkIds.length === filteredArtworks.length && filteredArtworks.length > 0 ? (
+                    <>
+                      <CheckSquare className="w-4 h-4 text-amber-500" />
+                      <span>取消全选</span>
+                    </>
+                  ) : (
+                    <>
+                      <Square className="w-4 h-4 text-neutral-400" />
+                      <span>全选 ({filteredArtworks.length})</span>
+                    </>
+                  )}
+                </button>
+
+                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">
+                  已选择 <span className="text-amber-500 font-mono text-sm">{selectedArtworkIds.length}</span> 项
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {selectedCategory === 'trash' ? (
+                  <>
+                    <button
+                      disabled={selectedArtworkIds.length === 0}
+                      onClick={() => {
+                        if (selectedArtworkIds.length === 0) return;
+                        onBatchRestore?.(selectedArtworkIds);
+                        setSelectedArtworkIds([]);
+                        setIsMultiSelectMode(false);
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white shadow-sm transition-all"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span>批量恢复 ({selectedArtworkIds.length})</span>
+                    </button>
+                    <button
+                      disabled={selectedArtworkIds.length === 0}
+                      onClick={() => {
+                        if (selectedArtworkIds.length === 0) return;
+                        if (confirm(`确定彻底删除选中的 ${selectedArtworkIds.length} 件作品吗？`)) {
+                          onBatchPermanentDelete?.(selectedArtworkIds);
+                          setSelectedArtworkIds([]);
+                          setIsMultiSelectMode(false);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white shadow-sm transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>彻底删除 ({selectedArtworkIds.length})</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    disabled={selectedArtworkIds.length === 0}
+                    onClick={() => {
+                      if (selectedArtworkIds.length === 0) return;
+                      onBatchSoftDelete?.(selectedArtworkIds);
+                      setSelectedArtworkIds([]);
+                      setIsMultiSelectMode(false);
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white shadow-sm transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>批量删除 ({selectedArtworkIds.length})</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setIsMultiSelectMode(false);
+                    setSelectedArtworkIds([]);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+                >
+                  退出
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Special Recycle Bin Banner */}
           {selectedCategory === 'trash' && (
-            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between gap-4">
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex flex-wrap items-center justify-between gap-4">
               <div className="text-xs text-rose-600 dark:text-rose-400 space-y-0.5">
                 <p className="font-semibold">回收站中的作品</p>
-                <p>作品已被移入回收站，您可以点击「恢复」重新放回作品库，或彻底清空。</p>
+                <p>作品已被移入回收站，您可以单独或点击「多选」勾选多个作品进行「批量恢复」，或彻底清空。</p>
               </div>
-              {deletedArtworks.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0">
                 <button
-                  onClick={onEmptyRecycleBin}
-                  className="px-3.5 py-1.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 text-xs font-medium transition-colors shrink-0"
+                  onClick={() => {
+                    setIsMultiSelectMode((prev) => !prev);
+                    setSelectedArtworkIds([]);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    isMultiSelectMode
+                      ? 'bg-amber-500 text-white shadow-md'
+                      : 'bg-rose-600/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white'
+                  }`}
                 >
-                  清空回收站 ({deletedArtworks.length})
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  <span>{isMultiSelectMode ? '取消多选' : '多选'}</span>
                 </button>
-              )}
+                {deletedArtworks.length > 0 && (
+                  <button
+                    onClick={onEmptyRecycleBin}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 text-xs font-medium transition-colors"
+                  >
+                    清空回收站 ({deletedArtworks.length})
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -868,7 +1101,15 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                       key={art.id}
                       artwork={art}
                       customStatuses={statuses}
-                      onClick={() => onSelectArtwork(art)}
+                      onClick={() => {
+                        if (isMultiSelectMode) {
+                          setSelectedArtworkIds((prev) =>
+                            prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
+                          );
+                        } else {
+                          onSelectArtwork(art);
+                        }
+                      }}
                       onToggleFavorite={(e) => {
                         e.stopPropagation();
                         onToggleFavorite(art.id);
@@ -877,6 +1118,16 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                         e.stopPropagation();
                         onTogglePin(art.id);
                       }}
+                      isSelectionMode={isMultiSelectMode}
+                      isSelected={selectedArtworkIds.includes(art.id)}
+                      onToggleSelect={() => {
+                        setSelectedArtworkIds((prev) =>
+                          prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
+                        );
+                      }}
+                      isTrashMode={selectedCategory === 'trash'}
+                      onRestore={() => onRestoreArtwork(art.id)}
+                      onPermanentDelete={() => onPermanentDeleteArtwork(art.id)}
                     />
                   ))}
                 </div>
@@ -892,6 +1143,16 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                       onSelect={onSelectArtwork}
                       onTogglePin={onTogglePin}
                       onToggleFavorite={onToggleFavorite}
+                      isSelectionMode={isMultiSelectMode}
+                      isSelected={selectedArtworkIds.includes(art.id)}
+                      onToggleSelect={() => {
+                        setSelectedArtworkIds((prev) =>
+                          prev.includes(art.id) ? prev.filter((id) => id !== art.id) : [...prev, art.id]
+                        );
+                      }}
+                      isTrashMode={selectedCategory === 'trash'}
+                      onRestore={(id) => onRestoreArtwork(id)}
+                      onPermanentDelete={(id) => onPermanentDeleteArtwork(id)}
                     />
                   ))}
                 </div>

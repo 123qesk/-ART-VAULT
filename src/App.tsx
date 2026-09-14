@@ -151,6 +151,25 @@ export default function App() {
     showToast('回收站已清空');
   };
 
+  // Batch operations
+  const handleBatchSoftDeleteArtworks = async (ids: string[]) => {
+    await vaultDB.batchSoftDeleteArtworks(ids);
+    await refreshData();
+    showToast(`已将选中的 ${ids.length} 件作品移至回收站`);
+  };
+
+  const handleBatchRestoreArtworks = async (ids: string[]) => {
+    await vaultDB.batchRestoreArtworks(ids);
+    await refreshData();
+    showToast(`已将选中的 ${ids.length} 件作品恢复至作品库`);
+  };
+
+  const handleBatchPermanentDeleteArtworks = async (ids: string[]) => {
+    await vaultDB.batchPermanentDeleteArtworks(ids);
+    await refreshData();
+    showToast(`已彻底删除选中的 ${ids.length} 件作品`);
+  };
+
   // Category & Status updates
   const handleUpdateCategories = (newCategories: CategoryItem[]) => {
     vaultDB.saveCategories(newCategories);
@@ -297,6 +316,9 @@ export default function App() {
               onDeleteArtwork={handleSoftDeleteArtwork}
               onRestoreArtwork={handleRestoreArtwork}
               onPermanentDeleteArtwork={handlePermanentDeleteArtwork}
+              onBatchSoftDelete={handleBatchSoftDeleteArtworks}
+              onBatchRestore={handleBatchRestoreArtworks}
+              onBatchPermanentDelete={handleBatchPermanentDeleteArtworks}
               onEmptyRecycleBin={handleEmptyRecycleBin}
               onOpenAddModal={() => {
                 setEditingArtwork(null);
