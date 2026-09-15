@@ -194,24 +194,66 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return DEFAULT_WALLPAPER;
   });
 
-  // Load wallpaper from IndexedDB on initial mount
+  // Load wallpaper from IndexedDB on initial mount & listen to backup restore events
   useEffect(() => {
     let mounted = true;
-    vaultDB.getWallpaper().then((savedWp) => {
-      if (mounted && savedWp) {
-        setWallpaperState(savedWp);
-        try {
-          // If small, cache in localStorage
+    const loadState = async () => {
+      try {
+        const savedWp = await vaultDB.getWallpaper();
+        if (mounted && savedWp) {
+          setWallpaperState(savedWp);
           if (savedWp.url.length < 500000) {
             localStorage.setItem(WALLPAPER_STORAGE_KEY, JSON.stringify(savedWp));
           }
-        } catch (e) {
-          console.error(e);
         }
+      } catch (e) {
+        console.error(e);
       }
-    });
+    };
+    loadState();
+
+    const handleReload = async () => {
+      try {
+        const savedTheme = localStorage.getItem(THEME_KEY) as ThemeMode;
+        if (['light', 'dark', 'ivory', 'pure_white', 'pink', 'pixel', 'custom'].includes(savedTheme)) {
+          setThemeState(savedTheme);
+        }
+        const savedPalettes = localStorage.getItem(THEME_PALETTES_KEY);
+        if (savedPalettes) {
+          setThemePalettes(JSON.parse(savedPalettes));
+        }
+        const rawPresets = localStorage.getItem(THEME_PRESETS_KEY);
+        if (rawPresets) {
+          setSavedPresets(JSON.parse(rawPresets));
+        }
+        const activePId = localStorage.getItem(ACTIVE_PRESET_KEY);
+        setActivePresetId(activePId);
+
+        const dMode = localStorage.getItem(DISPLAY_MODE_KEY) as DisplayMode;
+        if (dMode === 'default' || dMode === 'minimal') {
+          setDisplayModeState(dMode);
+        }
+        const fSize = Number(localStorage.getItem(FONT_SIZE_KEY));
+        if (fSize && fSize >= 12 && fSize <= 24) {
+          setFontSizeState(fSize);
+        }
+
+        const savedWp = await vaultDB.getWallpaper();
+        if (savedWp) {
+          setWallpaperState(savedWp);
+        } else {
+          setWallpaperState(DEFAULT_WALLPAPER);
+        }
+      } catch (e) {
+        console.error('Error reloading theme on backup restore:', e);
+      }
+    };
+
+    window.addEventListener('art_vault_theme_reloaded', handleReload);
+
     return () => {
       mounted = false;
+      window.removeEventListener('art_vault_theme_reloaded', handleReload);
     };
   }, []);
 

@@ -227,7 +227,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         try {
           const content = ev.target?.result as string;
           const result = await onImportBackup(content);
-          setImportStatus(`成功导入 ${result.artworksCount} 件作品及 ${result.diariesCount} 篇日志！`);
+          const parts = [`${result.artworksCount} 件作品`];
+          if (result.diariesCount) parts.push(`${result.diariesCount} 篇日记`);
+          if (result.presetsCount) parts.push(`${result.presetsCount} 个美化预设`);
+          setImportStatus(`成功导入：${parts.join('、')}！`);
           setTimeout(() => setImportStatus(''), 4000);
         } catch (err: any) {
           setImportStatus(`导入失败: ${err.message || '文件格式不正确'}`);
@@ -1800,13 +1803,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span>数据存储与备份</span>
             </h2>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              您的作品原图/动图/视频、标签、日期及日记均储存于浏览器专属的本地数据库 (IndexedDB)，安全私密。
+              您的作品原图/动图/视频媒体、分类标签、创作日记及自定义美化预设均安全储存于本地数据库。
             </p>
           </div>
           <div className="text-right shrink-0">
             <span className="text-xs font-mono block" style={{ color: 'var(--text-muted)' }}>当前数据统计</span>
             <span className="font-art-serif text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-              {artworksCount} 件作品 · {diariesCount} 篇日记
+              {artworksCount} 件作品 · {diariesCount} 篇日记 · {savedPresets.length} 个预设
             </span>
           </div>
         </div>
@@ -1822,7 +1825,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 导出完整备份 (JSON)
               </h3>
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                将作品信息、原图/动图/视频媒体与所有创作日记打包导出为本地单文件，方便换电脑或长期归档。
+                将作品信息、原图/动图/视频媒体、所有创作日记、分类与全部自定义美化预设/主题外观打包导出为本地单文件，方便换设备或长期归档。
               </p>
             </div>
             <button
@@ -1848,7 +1851,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 恢复 / 导入画匣备份
               </h3>
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                从此前导出的画匣 JSON 备份文件中还原所有作品与日记。
+                从此前导出的画匣 JSON 备份文件中完整还原所有作品媒体、创作日记与自定义美化预设。
               </p>
             </div>
             <input

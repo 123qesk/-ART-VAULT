@@ -352,19 +352,56 @@ class ArtVaultDatabase {
     const diaries = await this.getAllDiaries();
     const categories = this.getCategories();
     const statuses = this.getStatuses();
+    const wallpaper = await this.getWallpaper();
+
+    // Extract aesthetic presets and theme custom settings
+    let presets = [];
+    try {
+      const rawPresets = localStorage.getItem('art_vault_saved_presets_v1');
+      if (rawPresets) {
+        presets = JSON.parse(rawPresets);
+      }
+    } catch (e) {
+      console.error('Error reading presets for backup:', e);
+    }
+
+    let themePalettes = {};
+    try {
+      const rawPalettes = localStorage.getItem('art_vault_theme_palettes_v3');
+      if (rawPalettes) {
+        themePalettes = JSON.parse(rawPalettes);
+      }
+    } catch (e) {
+      console.error('Error reading theme palettes for backup:', e);
+    }
+
+    const currentTheme = localStorage.getItem('art_vault_theme_mode_v3') || 'ivory';
+    const displayMode = localStorage.getItem('art_vault_display_mode_v1') || 'normal';
+    const fontSize = Number(localStorage.getItem('art_vault_font_size_v1')) || 16;
+    const activePresetId = localStorage.getItem('art_vault_active_preset_id_v1') || null;
+
     const payload = {
-      version: 2,
+      version: 3,
       appName: '画匣 · ART VAULT',
       exportedAt: new Date().toISOString(),
       artworks,
       diaries,
       categories,
       statuses,
+      presets,
+      themePalettes,
+      themeSettings: {
+        theme: currentTheme,
+        displayMode,
+        fontSize,
+        activePresetId,
+      },
+      wallpaper,
     };
     return JSON.stringify(payload, null, 2);
   }
 
-  async importBackup(jsonString: string): Promise<{ artworksCount: number; diariesCount: number }> {
+  async importBackup(jsonString: string): Promise<{ artworksCount: number; diariesCount: number; presetsCount: number }> {
     const data = JSON.parse(jsonString);
     if (!data.artworks || !Array.isArray(data.artworks)) {
       throw new Error('无效的画匣备份文件格式');
@@ -376,6 +413,9 @@ class ArtVaultDatabase {
     const diaryStore = tx.objectStore('diaries');
 
     for (const art of data.artworks) {
+      if (art.title) {
+        art.title = art.title.replace(/[《》]/g, '').trim();
+      }
       artStore.put(art);
     }
     if (data.diaries && Array.isArray(data.diaries)) {
@@ -391,11 +431,61 @@ class ArtVaultDatabase {
       this.saveStatuses(data.statuses);
     }
 
+    // Restore Custom Theme Presets (自定义美化预设)
+    let presetsCount = 0;
+    if (data.presets && Array.isArray(data.presets)) {
+      localStorage.setItem('art_vault_saved_presets_v1', JSON.stringify(data.presets));
+      presetsCount = data.presets.length;
+    }
+
+    // Restore Theme Palettes & Customizations
+    if (data.themePalettes && typeof data.themePalettes === 'object') {
+      localStorage.setItem('art_vault_theme_palettes_v3', JSON.stringify(data.themePalettes));
+    }
+
+    // Restore Theme Settings
+    if (data.themeSettings) {
+      if (data.themeSettings.theme) {
+        localStorage.setItem('art_vault_theme_mode_v3', data.themeSettings.theme);
+      }
+      if (data.themeSettings.displayMode) {
+        localStorage.setItem('art_vault_display_mode_v1', data.themeSettings.displayMode);
+      }
+      if (data.themeSettings.fontSize) {
+        localStorage.setItem('art_vault_font_size_v1', String(data.themeSettings.fontSize));
+      }
+      if (data.themeSettings.activePresetId !== undefined) {
+        if (data.themeSettings.activePresetId) {
+          localStorage.setItem('art_vault_active_preset_id_v1', data.themeSettings.activePresetId);
+        } else {
+          localStorage.removeItem('art_vault_active_preset_id_v1');
+        }
+      }
+    }
+
+    // Restore Custom Wallpaper
+    if (data.wallpaper) {
+      await this.saveWallpaper(data.wallpaper);
+      try {
+        if (data.wallpaper.url && data.wallpaper.url.length < 500000) {
+          localStorage.setItem('art_vault_wallpaper_state_v1', JSON.stringify(data.wallpaper));
+        }
+      } catch (e) {
+        console.error('Error caching wallpaper to localStorage:', e);
+      }
+    }
+
+    // Trigger theme update notification
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('art_vault_theme_reloaded'));
+    }
+
     return new Promise((resolve, reject) => {
       tx.oncomplete = () => {
         resolve({
           artworksCount: data.artworks.length,
           diariesCount: data.diaries?.length || 0,
+          presetsCount,
         });
       };
       tx.onerror = () => reject(tx.error);

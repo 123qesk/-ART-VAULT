@@ -273,7 +273,10 @@ export default function App() {
   const handleImportBackup = async (jsonStr: string) => {
     const result = await vaultDB.importBackup(jsonStr);
     await refreshData();
-    showToast(`成功恢复 ${result.artworksCount} 件作品`);
+    const parts = [`${result.artworksCount} 件作品`];
+    if (result.diariesCount) parts.push(`${result.diariesCount} 篇日记`);
+    if (result.presetsCount) parts.push(`${result.presetsCount} 个美化预设`);
+    showToast(`成功恢复：${parts.join('、')}`);
     return result;
   };
 
