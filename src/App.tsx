@@ -106,7 +106,7 @@ export default function App() {
 
     await vaultDB.saveArtwork(savedItem);
     await refreshData();
-    showToast(existingId ? `已更新作品《${savedItem.title}》` : `已存入画匣《${savedItem.title}》`);
+    showToast(existingId ? `已更新作品 ${savedItem.title}` : `已存入画匣 ${savedItem.title}`);
   };
 
   // Update artwork directly (e.g. color palette updates)
@@ -114,7 +114,7 @@ export default function App() {
     await vaultDB.saveArtwork(art);
     setSelectedArtworkDetail(art);
     await refreshData();
-    showToast(`已保存《${art.title}》配色色卡`);
+    showToast(`已保存 ${art.title} 配色色卡`);
   };
 
   // Toggle favorite
@@ -126,7 +126,7 @@ export default function App() {
       art.updatedAt = new Date().toISOString();
       await vaultDB.saveArtwork(art);
       await refreshData();
-      showToast(art.isFavorite ? `已将《${art.title}》加入收藏` : `已取消收藏《${art.title}》`);
+      showToast(art.isFavorite ? `已将 ${art.title} 加入收藏` : `已取消收藏 ${art.title}`);
     }
   };
 
@@ -144,7 +144,7 @@ export default function App() {
     await vaultDB.softDeleteArtwork(id);
     setSelectedArtworkDetail(null);
     await refreshData();
-    showToast(`已将《${art?.title || '作品'}》移至回收站`);
+    showToast(`已将 ${art?.title || '作品'} 移至回收站`);
   };
 
   // Restore artwork

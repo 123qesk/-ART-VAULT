@@ -92,6 +92,9 @@ class ArtVaultDatabase {
           items = items.filter((item) => !item.isDeleted);
         }
         items.forEach((item) => {
+          if (item.title) {
+            item.title = item.title.replace(/[《》]/g, '');
+          }
           if (item.imageBlob && item.imageBlob instanceof Blob) {
             if (!item.imageUrl || item.imageUrl.startsWith('blob:')) {
               item.imageUrl = URL.createObjectURL(item.imageBlob);
@@ -119,6 +122,9 @@ class ArtVaultDatabase {
       req.onsuccess = () => {
         const item = req.result as Artwork | undefined;
         if (item) {
+          if (item.title) {
+            item.title = item.title.replace(/[《》]/g, '');
+          }
           if (item.imageBlob && item.imageBlob instanceof Blob) {
             if (!item.imageUrl || item.imageUrl.startsWith('blob:')) {
               item.imageUrl = URL.createObjectURL(item.imageBlob);
@@ -134,6 +140,9 @@ class ArtVaultDatabase {
   }
 
   async saveArtwork(artwork: Artwork): Promise<Artwork> {
+    if (artwork.title) {
+      artwork.title = artwork.title.replace(/[《》]/g, '').trim();
+    }
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction('artworks', 'readwrite');

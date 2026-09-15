@@ -48,7 +48,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
   // Open modal for creation or edit
   const handleOpenAdd = (associatedArt?: Artwork | null) => {
     setEditingDiary(null);
-    setTitle(associatedArt ? `《${associatedArt.title}》创作随笔` : '');
+    setTitle(associatedArt ? `${associatedArt.title} 创作随笔` : '');
     setDate(new Date().toISOString().split('T')[0]);
     setContent('');
     setSelectedArtId(associatedArt?.id || '');
@@ -165,7 +165,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
             <option value="all">全部日志 ({diaries.length})</option>
             {artworks.map((art) => (
               <option key={art.id} value={art.id}>
-                《{art.title}》
+                {art.title}
               </option>
             ))}
           </select>
@@ -243,7 +243,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                                   style={{ color: 'var(--text-muted)' }}
                                 >
                                   <ImageIcon className="w-3.5 h-3.5 shrink-0" />
-                                  <span className="truncate">关联作品《{diary.artworkTitle}》</span>
+                                  <span className="truncate">关联作品: {diary.artworkTitle}</span>
                                 </button>
                               )}
                             </div>
@@ -289,7 +289,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                             />
                             <div className="text-xs space-y-0.5 min-w-0 flex-1">
                               <span className="font-medium truncate block" style={{ color: 'var(--text-main)' }}>
-                                《{matchedArt.title}》
+                                {matchedArt.title}
                               </span>
                               <span className="block font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
                                 {matchedArt.type} · {matchedArt.width} × {matchedArt.height}
@@ -392,7 +392,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="例如：《雨夜》环境光攻克、深夜速涂随笔..."
+                  placeholder="例如：雨夜环境光攻克、深夜速涂随笔..."
                   style={{
                     backgroundColor: 'var(--bg-page)',
                     borderColor: 'var(--card-border)',
@@ -438,7 +438,7 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                     <option value="">不关联具体作品 (纯日记)</option>
                     {artworks.map((a) => (
                       <option key={a.id} value={a.id}>
-                        《{a.title}》({a.type})
+                        {a.title} ({a.type})
                       </option>
                     ))}
                   </select>

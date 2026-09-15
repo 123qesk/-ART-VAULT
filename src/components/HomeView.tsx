@@ -921,7 +921,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         {formattedDate}
                       </span>
                       {entry.artworkTitle && (
-                        <span>关联《{entry.artworkTitle}》</span>
+                        <span>关联: {entry.artworkTitle}</span>
                       )}
                     </div>
                     <h3 

@@ -197,7 +197,7 @@ const GalleryListRowComponent: React.FC<{
                 style={{ color: isHovered ? 'var(--accent-gold)' : undefined }}
                 className="font-art-serif text-sm sm:text-lg font-bold text-neutral-900 dark:text-neutral-100 transition-colors truncate"
               >
-                《{art.title}》
+                {art.title}
               </h3>
               <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-mono">
                 {art.type}

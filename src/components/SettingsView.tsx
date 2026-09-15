@@ -1472,7 +1472,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onClick={() => {
                     if (!presetName.trim()) return;
                     addPreset(presetName.trim(), showInHeaderInput);
-                    setPresetToast(`已成功保存预设《${presetName.trim()}》`);
+                    setPresetToast(`已成功保存预设 ${presetName.trim()}`);
                     setPresetName('');
                     setTimeout(() => setPresetToast(null), 3000);
                   }}

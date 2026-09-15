@@ -270,7 +270,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
   const processSingleFile = (file: File): Promise<BatchFileItem> => {
     return new Promise((resolve, reject) => {
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
-      const cleanName = file.name.replace(/\.[^/.]+$/, '');
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[《》]/g, '').trim();
       const id = `batch-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
       const blobUrl = URL.createObjectURL(file);
 
@@ -566,9 +566,10 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
         setIsSubmitting(true);
         for (let i = 0; i < batchFiles.length; i++) {
           const item = batchFiles[i];
-          setBatchProgress(`正在保存第 ${i + 1}/${batchFiles.length} 张: 《${item.title}》...`);
+          const cleanItemTitle = (item.title || '').replace(/[《》]/g, '').trim();
+          setBatchProgress(`正在保存第 ${i + 1}/${batchFiles.length} 张: ${cleanItemTitle}...`);
           await onSave({
-            title: item.title.trim() || `作品_${i + 1}`,
+            title: cleanItemTitle || `作品_${i + 1}`,
             type,
             tags: parsedTags,
             date,
@@ -600,7 +601,8 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
     }
 
     // Single-file submission
-    if (!title.trim()) {
+    const cleanSingleTitle = title.replace(/[《》]/g, '').trim();
+    if (!cleanSingleTitle) {
       setErrorMsg('请在此填写作品名称');
       return;
     }
@@ -613,7 +615,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
       setIsSubmitting(true);
       await onSave(
         {
-          title: title.trim(),
+          title: cleanSingleTitle,
           type,
           tags: parsedTags,
           date,
