@@ -114,7 +114,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               />
             )}
           </div>
-          <span className="text-[10px] mt-0.5 tracking-tight font-medium">手记</span>
+          <span className="text-[10px] mt-0.5 tracking-tight font-medium">日记</span>
         </button>
 
         {/* 5. 统计 */}

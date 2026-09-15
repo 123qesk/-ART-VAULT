@@ -10,7 +10,10 @@ import {
   Clock,
   Filter,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  Smile,
+  Heart,
+  PieChart
 } from 'lucide-react';
 import { Artwork, DiaryEntry, StatusItem } from '../types';
 
@@ -174,6 +177,102 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
     });
     return counts;
   }, [filteredArtworks]);
+
+  // Mood statistics calculation (Requirement 1: 创作日志心情分布与情绪趋势)
+  const [hoveredMood, setHoveredMood] = useState<string | null>(null);
+
+  const moodStats = useMemo(() => {
+    // Determine scope of diaries: prefer current filtered diaries, fallback to all diaries if filtered has 0 with mood
+    const activeList = filteredDiaries;
+    const fallbackList = diaries;
+    const listToAnalyze = activeList.length > 0 ? activeList : fallbackList;
+
+    const moodMap = new Map<string, { count: number; recentTitle?: string }>();
+    let totalWithMood = 0;
+
+    listToAnalyze.forEach((d) => {
+      const m = d.mood?.trim();
+      if (m) {
+        totalWithMood++;
+        const prev = moodMap.get(m) || { count: 0, recentTitle: d.title };
+        moodMap.set(m, { count: prev.count + 1, recentTitle: d.title });
+      }
+    });
+
+    // Harmonious palette for mood slices
+    const MOOD_COLOR_PALETTE = [
+      '#f59e0b', // Amber / Gold
+      '#10b981', // Emerald
+      '#8b5cf6', // Violet
+      '#3b82f6', // Blue
+      '#ec4899', // Pink
+      '#06b6d4', // Cyan
+      '#f97316', // Orange
+      '#6366f1', // Indigo
+      '#14b8a6', // Teal
+      '#ef4444', // Rose Red
+    ];
+
+    const list = Array.from(moodMap.entries())
+      .map(([rawMood, data], idx) => {
+        const emojiMatch = rawMood.match(/^(\p{Extended_Pictographic}|\S+)\s*(.*)$/u);
+        const emoji = emojiMatch ? emojiMatch[1] : '🎨';
+        const label = emojiMatch && emojiMatch[2] ? emojiMatch[2] : rawMood;
+        const percent = totalWithMood > 0 ? Math.round((data.count / totalWithMood) * 100) : 0;
+        const color = MOOD_COLOR_PALETTE[idx % MOOD_COLOR_PALETTE.length];
+        return {
+          rawMood,
+          emoji,
+          label,
+          count: data.count,
+          percent,
+          color,
+          recentTitle: data.recentTitle,
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    // Calculate chronological mood timeline & flow state index
+    const timelineEntries = listToAnalyze
+      .filter((d) => d.mood && d.mood.trim())
+      .sort((a, b) => (a.date > b.date ? 1 : -1))
+      .slice(-15) // Recent 15 entries for timeline trend
+      .map((d) => {
+        const m = d.mood!.trim();
+        const emojiMatch = m.match(/^(\p{Extended_Pictographic}|\S+)\s*(.*)$/u);
+        const emoji = emojiMatch ? emojiMatch[1] : '🎨';
+        const label = emojiMatch && emojiMatch[2] ? emojiMatch[2] : m;
+        const matchedItem = list.find((item) => item.rawMood === m);
+        return {
+          id: d.id,
+          date: d.date,
+          title: d.title,
+          mood: m,
+          emoji,
+          label,
+          color: matchedItem?.color || '#f59e0b',
+        };
+      });
+
+    // High flow / positive inspiration moods count
+    const highFlowCount = listToAnalyze.filter((d) => {
+      const m = (d.mood || '').toLowerCase();
+      return m.includes('灵感') || m.includes('心流') || m.includes('热血') || m.includes('专注') || m.includes('突破') || m.includes('愉悦') || m.includes('爽');
+    }).length;
+
+    const flowIndex = totalWithMood > 0 ? Math.round((highFlowCount / totalWithMood) * 100) : 0;
+
+    return {
+      list,
+      totalWithMood,
+      totalDiaries: listToAnalyze.length,
+      coveragePercent: listToAnalyze.length > 0 ? Math.round((totalWithMood / listToAnalyze.length) * 100) : 0,
+      dominantMood: list.length > 0 ? list[0] : null,
+      flowIndex,
+      timelineEntries,
+      isScopeFallback: activeList.length === 0 && fallbackList.length > 0,
+    };
+  }, [filteredDiaries, diaries]);
 
   // Descriptive title of current scope
   const currentScopeTitle = useMemo(() => {
@@ -416,7 +515,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
           </div>
           <div className="mt-3 text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 font-mono">
             <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
-            <span>有产出或写日志的天数</span>
+            <span>有产出或写日记的天数</span>
           </div>
         </div>
 
@@ -438,7 +537,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
 
         <div style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-5 sm:p-6 rounded-2xl border shadow-xs">
           <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500 block mb-2">
-            创作日志
+            创作日记
           </span>
           <div className="flex items-baseline gap-2">
             <span className="font-art-serif text-3xl sm:text-4xl font-bold text-neutral-900 dark:text-neutral-100">
@@ -512,7 +611,431 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
         </div>
       </section>
 
-      {/* Two Columns: Category Distribution & Tag Ranking */}
+      {/* Requirement 1: Mood Distribution Chart & Trend Analysis (创作日志中心情分布的占比情况) */}
+      <section 
+        id="section-mood-distribution-chart"
+        style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} 
+        className="p-6 rounded-3xl border shadow-xs space-y-6"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-8 h-8 rounded-xl flex items-center justify-center border shrink-0"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                  color: 'var(--accent-gold)',
+                }}
+              >
+                <Smile className="w-4 h-4" />
+              </div>
+              <h2 className="font-art-serif text-lg font-bold text-neutral-900 dark:text-neutral-100">
+                创作日记心情分布与心流趋势
+              </h2>
+            </div>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+              统计创作日记中记录的各种心情占比与情绪趋势，洞察高产灵感与瓶颈心境
+              {moodStats.isScopeFallback && '（当前选定时段暂无心情记录，已展示全部历史心情趋势）'}
+            </p>
+          </div>
+
+          {moodStats.totalWithMood > 0 && (
+            <div className="flex items-center gap-2 text-xs font-mono self-start sm:self-auto">
+              <span 
+                className="px-2.5 py-1 rounded-full border"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                  color: 'var(--accent-gold)',
+                }}
+              >
+                共记录 {moodStats.totalWithMood} 次心情 · 覆盖率 {moodStats.coveragePercent}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        {moodStats.totalWithMood > 0 ? (
+          <div className="space-y-6">
+            {/* Top Summary Badges */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+              <div 
+                className="p-3.5 rounded-2xl border flex items-center gap-3.5"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 25%, var(--card-border))',
+                }}
+              >
+                <div 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 border"
+                  style={{
+                    backgroundColor: 'var(--card-bg)',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                  }}
+                >
+                  {moodStats.dominantMood?.emoji || '✨'}
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] text-neutral-400 block">主导创作心态</span>
+                  <span className="font-art-serif text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 truncate block">
+                    {moodStats.dominantMood?.label} ({moodStats.dominantMood?.percent}%)
+                  </span>
+                </div>
+              </div>
+
+              <div 
+                className="p-3.5 rounded-2xl border flex items-center gap-3.5"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, #f59e0b 8%, var(--card-bg))',
+                  borderColor: 'color-mix(in srgb, #f59e0b 25%, var(--card-border))',
+                }}
+              >
+                <div 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                >
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] text-neutral-400 block">心流与高产指数</span>
+                  <span className="font-art-serif text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 block">
+                    {moodStats.flowIndex}% <span className="text-[11px] font-mono font-normal text-neutral-400">灵感/心流占比</span>
+                  </span>
+                </div>
+              </div>
+
+              <div 
+                className="p-3.5 rounded-2xl border flex items-center gap-3.5"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, #10b981 8%, var(--card-bg))',
+                  borderColor: 'color-mix(in srgb, #10b981 25%, var(--card-border))',
+                }}
+              >
+                <div 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                >
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] text-neutral-400 block">记录篇数 / 覆盖率</span>
+                  <span className="font-art-serif text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 block">
+                    {moodStats.totalWithMood} 篇 / {moodStats.coveragePercent}%
+                  </span>
+                </div>
+              </div>
+
+              <div 
+                className="p-3.5 rounded-2xl border flex items-center gap-3.5"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, #8b5cf6 8%, var(--card-bg))',
+                  borderColor: 'color-mix(in srgb, #8b5cf6 25%, var(--card-border))',
+                }}
+              >
+                <div 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 border border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                >
+                  <Smile className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] text-neutral-400 block">创作心境丰富度</span>
+                  <span className="font-art-serif text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 block">
+                    {moodStats.list.length} 种不同情绪
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Donut Chart & Mood Ranking Dual View */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center pt-2">
+              
+              {/* Left Column: Interactive SVG Donut Chart */}
+              <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800">
+                <div className="relative w-52 h-52 sm:w-56 sm:h-56 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
+                    {/* Background circle track */}
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="70"
+                      fill="transparent"
+                      stroke="currentColor"
+                      strokeWidth="24"
+                      className="text-neutral-100 dark:text-neutral-800/80"
+                    />
+
+                    {/* Colored Donut Segments */}
+                    {(() => {
+                      const radius = 70;
+                      const circumference = 2 * Math.PI * radius; // ≈ 439.82
+                      let accumulatedPercent = 0;
+
+                      return moodStats.list.map((item) => {
+                        const strokeDash = (item.percent / 100) * circumference;
+                        const strokeOffset = -(accumulatedPercent / 100) * circumference;
+                        accumulatedPercent += item.percent;
+
+                        const isHovered = hoveredMood === item.rawMood;
+
+                        return (
+                          <circle
+                            key={item.rawMood}
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            fill="transparent"
+                            stroke={item.color}
+                            strokeWidth={isHovered ? 28 : 24}
+                            strokeDasharray={`${strokeDash} ${circumference}`}
+                            strokeDashoffset={strokeOffset}
+                            strokeLinecap="butt"
+                            className="transition-all duration-300 cursor-pointer"
+                            style={{
+                              filter: isHovered ? `drop-shadow(0 0 8px ${item.color}80)` : undefined,
+                              opacity: hoveredMood && !isHovered ? 0.45 : 1,
+                            }}
+                            onMouseEnter={() => setHoveredMood(item.rawMood)}
+                            onMouseLeave={() => setHoveredMood(null)}
+                          />
+                        );
+                      });
+                    })()}
+                  </svg>
+
+                  {/* Centered Mood Display Info in Donut Hole */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+                    {(() => {
+                      const activeItem = hoveredMood 
+                        ? moodStats.list.find((m) => m.rawMood === hoveredMood) 
+                        : moodStats.dominantMood;
+
+                      if (!activeItem) {
+                        return (
+                          <>
+                            <span className="text-2xl mb-0.5">🎨</span>
+                            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">创作心流</span>
+                            <span className="text-[10px] text-neutral-400 font-mono mt-0.5">{moodStats.totalWithMood} 篇记录</span>
+                          </>
+                        );
+                      }
+
+                      return (
+                        <>
+                          <span className="text-3xl mb-0.5 transition-transform scale-110">
+                            {activeItem.emoji}
+                          </span>
+                          <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1 max-w-[120px]">
+                            {activeItem.label}
+                          </span>
+                          <span className="text-xs font-mono font-bold mt-0.5" style={{ color: activeItem.color }}>
+                            {activeItem.percent}% ({activeItem.count}篇)
+                          </span>
+                          <span className="text-[9px] text-neutral-400 font-mono mt-0.5">
+                            {hoveredMood ? '当前选中心情' : '主导创作情绪'}
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <span className="text-[11px] text-neutral-400 mt-2 font-mono text-center">
+                  可悬停或点击右侧列表查看各情绪分布详情
+                </span>
+              </div>
+
+              {/* Right Column: Mood List with Bars & Percentages */}
+              <div className="lg:col-span-7 space-y-2.5">
+                {moodStats.list.map((item) => {
+                  const isHovered = hoveredMood === item.rawMood;
+                  return (
+                    <div
+                      key={item.rawMood}
+                      onMouseEnter={() => setHoveredMood(item.rawMood)}
+                      onMouseLeave={() => setHoveredMood(null)}
+                      className={`p-2.5 sm:p-3 rounded-2xl border transition-all cursor-pointer ${
+                        isHovered 
+                          ? 'shadow-xs scale-[1.01]' 
+                          : 'hover:border-neutral-300 dark:hover:border-neutral-700'
+                      }`}
+                      style={{
+                        backgroundColor: isHovered 
+                          ? 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))' 
+                          : 'var(--card-bg)',
+                        borderColor: isHovered 
+                          ? item.color 
+                          : 'var(--card-border)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-lg shrink-0">{item.emoji}</span>
+                          <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                            {item.label}
+                          </span>
+                          {item.recentTitle && (
+                            <span className="hidden sm:inline text-[10px] text-neutral-400 truncate max-w-[150px]">
+                              例：《{item.recentTitle}》
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 font-mono">
+                          <span className="text-neutral-500 dark:text-neutral-400 font-medium">
+                            {item.count} 篇
+                          </span>
+                          <span 
+                            className="font-bold px-1.5 py-0.5 rounded text-[11px]"
+                            style={{ 
+                              backgroundColor: `color-mix(in srgb, ${item.color} 15%, transparent)`,
+                              color: item.color 
+                            }}
+                          >
+                            {item.percent}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.max(item.percent, 3)}%`,
+                            backgroundColor: item.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Emotional Trend Insight Notice */}
+                <div 
+                  className="p-3 rounded-xl border text-xs flex items-center gap-2.5 mt-3"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--accent-gold) 6%, var(--card-bg))',
+                    borderColor: 'color-mix(in srgb, var(--accent-gold) 20%, var(--card-border))',
+                    color: 'var(--text-main)',
+                  }}
+                >
+                  <Sparkles className="w-4 h-4 shrink-0" style={{ color: 'var(--accent-gold)' }} />
+                  <p className="text-[11px] leading-relaxed">
+                    <strong>情绪洞察：</strong>
+                    {moodStats.dominantMood?.label.includes('心流') || moodStats.dominantMood?.label.includes('专注')
+                      ? '画师专注度极高，深度的“心流”能带来源源不断的笔触掌控力，建议保留当下的作画仪式感。'
+                      : moodStats.dominantMood?.label.includes('灵感') || moodStats.dominantMood?.label.includes('突破')
+                      ? '近期的创作伴随着强烈的新鲜感与突破冲劲，适合趁热打铁挑战更具挑战性的主题或画风。'
+                      : '情绪是笔触的灵魂，在日记中如实记录每一次起伏，能帮助你清晰看到自己艺术风格与心态的成长脉络。'}
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Timeline Flow Trend: Chronological Mood Shift & Flow Sequence */}
+            {moodStats.timelineEntries && moodStats.timelineEntries.length > 0 && (
+              <div 
+                className="p-4 sm:p-5 rounded-2xl border space-y-3 pt-4"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--card-bg) 70%, var(--bg-page))',
+                  borderColor: 'var(--card-border)',
+                }}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                    <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                      近阶段创作心流与情绪演进轨迹
+                    </h3>
+                  </div>
+                  <span className="text-[11px] font-mono text-neutral-400">
+                    按时间正序呈现最近 {moodStats.timelineEntries.length} 篇日记的心情脉络
+                  </span>
+                </div>
+
+                {/* Horizontal Flow Strip */}
+                <div className="overflow-x-auto pb-2 pt-1 scrollbar-thin">
+                  <div className="flex items-center gap-2 min-w-max">
+                    {moodStats.timelineEntries.map((entry, idx) => {
+                      const isHovered = hoveredMood === entry.mood;
+                      return (
+                        <div
+                          key={entry.id || idx}
+                          onMouseEnter={() => setHoveredMood(entry.mood)}
+                          onMouseLeave={() => setHoveredMood(null)}
+                          className={`relative flex flex-col items-center p-2.5 rounded-xl border transition-all cursor-pointer min-w-[90px] max-w-[120px] text-center ${
+                            isHovered ? 'scale-105 shadow-md -translate-y-0.5' : 'hover:border-amber-500/40'
+                          }`}
+                          style={{
+                            backgroundColor: isHovered 
+                              ? 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))' 
+                              : 'var(--card-bg)',
+                            borderColor: isHovered ? entry.color : 'var(--card-border)',
+                          }}
+                        >
+                          <span className="text-xl mb-1">{entry.emoji}</span>
+                          <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 truncate w-full">
+                            {entry.label}
+                          </span>
+                          <span className="text-[9px] font-mono text-neutral-400 mt-0.5">
+                            {entry.date ? entry.date.slice(5) : ''}
+                          </span>
+                          {entry.title && (
+                            <span className="text-[9px] text-neutral-500 dark:text-neutral-400 truncate w-full mt-0.5 opacity-80">
+                              {entry.title}
+                            </span>
+                          )}
+
+                          {/* Node indicator dot */}
+                          <div 
+                            className="w-2 h-2 rounded-full mt-1.5 shadow-xs" 
+                            style={{ backgroundColor: entry.color }} 
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Empty State if no moods logged yet */
+          <div 
+            className="text-center py-10 px-4 rounded-2xl border border-dashed space-y-3"
+            style={{ borderColor: 'var(--card-border)' }}
+          >
+            <div 
+              className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                color: 'var(--accent-gold)',
+              }}
+            >
+              <Smile className="w-6 h-6" />
+            </div>
+            <div className="space-y-1 max-w-md mx-auto">
+              <h4 className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+                暂无心情分布数据
+              </h4>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                在创作日记中为每次画画记录心情（如 ✨ 灵感爆发、🎨 沉浸心流、🔥 热血沸腾、🍵 心静如水），系统将在此为你呈现创作情绪占比图表与情绪趋势。
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-1.5 pt-1 text-xs">
+              {['✨ 灵感爆发', '🎨 沉浸心流', '🔥 热血沸腾', '🍵 心静如水', '☕ 疲惫充实', '🌧️ 遇到瓶颈'].map((m) => (
+                <span 
+                  key={m}
+                  className="px-2.5 py-1 rounded-full border bg-neutral-100/60 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300 font-mono text-[11px]"
+                  style={{ borderColor: 'var(--card-border)' }}
+                >
+                  {m}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Most painted types */}

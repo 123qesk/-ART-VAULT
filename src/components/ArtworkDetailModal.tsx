@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   X, 
   ChevronLeft, 
@@ -22,7 +22,9 @@ import {
   Copy,
   Plus,
   Check,
-  Sliders
+  Sliders,
+  ImageOff,
+  Loader2
 } from 'lucide-react';
 import { Artwork, DiaryEntry } from '../types';
 import { ThemeSlider } from './ThemeSlider';
@@ -43,8 +45,8 @@ interface ArtworkDetailModalProps {
 
 export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
   artwork,
-  allArtworks,
-  diaries,
+  allArtworks = [],
+  diaries = [],
   onClose,
   onSelectArtwork,
   onToggleFavorite,
@@ -59,7 +61,8 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isImageLoading, setIsImageLoading] = useState(true);
+  const [imageHasError, setImageHasError] = useState(false);
 
   // Color Palette state
   const [newColorHex, setNewColorHex] = useState('#FFFFFF');
@@ -67,6 +70,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
   // Reset zoom & pan when switching artworks
   useEffect(() => {
@@ -74,12 +78,42 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
     setRotation(0);
     setPan({ x: 0, y: 0 });
     setIsDescriptionExpanded(false);
+    setIsImageLoading(true);
+    setImageHasError(false);
   }, [artwork?.id]);
+
+  const currentIndex = useMemo(() => {
+    if (!artwork || !allArtworks || allArtworks.length === 0) return -1;
+    return allArtworks.findIndex((a) => a.id === artwork.id);
+  }, [allArtworks, artwork?.id]);
+
+  const prevArtwork = useMemo(() => {
+    if (currentIndex > 0) return allArtworks[currentIndex - 1];
+    return null;
+  }, [allArtworks, currentIndex]);
+
+  const nextArtwork = useMemo(() => {
+    if (currentIndex >= 0 && currentIndex < allArtworks.length - 1) return allArtworks[currentIndex + 1];
+    return null;
+  }, [allArtworks, currentIndex]);
+
+  const goToPrev = useCallback(() => {
+    if (prevArtwork) onSelectArtwork(prevArtwork);
+  }, [prevArtwork, onSelectArtwork]);
+
+  const goToNext = useCallback(() => {
+    if (nextArtwork) onSelectArtwork(nextArtwork);
+  }, [nextArtwork, onSelectArtwork]);
 
   // Keyboard navigation (left/right arrows, esc)
   useEffect(() => {
+    if (!artwork) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!artwork) return;
+      // Don't intercept arrow keys when typing inside an input/textarea
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+      }
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'ArrowLeft') {
@@ -90,21 +124,35 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [artwork, allArtworks]);
+  }, [artwork, goToPrev, goToNext, onClose]);
+
+  // Window-level dragging handlers to prevent stuck mouse drag
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      setPan({
+        x: dragStartRef.current.panX + dx,
+        y: dragStartRef.current.panY + dy,
+      });
+    };
+
+    const handleWindowMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [isDragging]);
 
   if (!artwork) return null;
-
-  const currentIndex = allArtworks.findIndex((a) => a.id === artwork.id);
-  const prevArtwork = currentIndex > 0 ? allArtworks[currentIndex - 1] : null;
-  const nextArtwork = currentIndex < allArtworks.length - 1 ? allArtworks[currentIndex + 1] : null;
-
-  const goToPrev = () => {
-    if (prevArtwork) onSelectArtwork(prevArtwork);
-  };
-
-  const goToNext = () => {
-    if (nextArtwork) onSelectArtwork(nextArtwork);
-  };
 
   // Color Palette handlers
   const handleAddColor = () => {
@@ -129,14 +177,16 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
   };
 
   const handleCopyColor = (hex: string) => {
-    navigator.clipboard.writeText(hex);
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(hex).catch(() => {});
+    }
     setCopiedColorHex(hex);
     setTimeout(() => setCopiedColorHex(null), 2000);
   };
 
   // Zoom handlers
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.3, 4));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.3, 0.4));
+  const handleZoomIn = () => setZoomLevel((z) => Math.min(Number((z + 0.3).toFixed(2)), 4));
+  const handleZoomOut = () => setZoomLevel((z) => Math.max(Number((z - 0.3).toFixed(2)), 0.4));
   const handleResetZoom = () => {
     setZoomLevel(1);
     setPan({ x: 0, y: 0 });
@@ -155,24 +205,19 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
     }
   };
 
-  // Mouse pan handling
+  // Mouse pan initiation
   const handleMouseDown = (e: React.MouseEvent) => {
     if (zoomLevel > 1) {
+      e.preventDefault();
       setIsDragging(true);
-      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        panX: pan.x,
+        panY: pan.y,
+      };
     }
   };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging && zoomLevel > 1) {
-      setPan({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
-    }
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
 
   // Download image, video, or raw source file
   const handleDownload = () => {
@@ -203,8 +248,11 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
     }
   };
 
-  // Related diaries
-  const relatedDiaries = diaries.filter((d) => d.artworkId === artwork.id);
+  // Memoized related diaries to avoid expensive re-filtering
+  const relatedDiaries = useMemo(() => {
+    if (!diaries || diaries.length === 0 || !artwork?.id) return [];
+    return diaries.filter((d) => d.artworkId === artwork.id);
+  }, [diaries, artwork?.id]);
 
   return (
     <div
@@ -304,15 +352,21 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
         }`}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
       >
+        {/* Loading Spinner */}
+        {isImageLoading && !imageHasError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none z-10">
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--accent-gold)' }} />
+            <span className="text-xs font-mono text-neutral-400">正在载入高画质图稿...</span>
+          </div>
+        )}
+
         {/* Navigation Arrow Left */}
         {prevArtwork && (
           <button
             onClick={goToPrev}
             aria-label="上一件作品"
-            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95"
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
@@ -323,7 +377,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
           <button
             onClick={goToNext}
             aria-label="下一件作品"
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
@@ -344,13 +398,31 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
               autoPlay
               loop
               playsInline
+              onLoadedData={() => setIsImageLoading(false)}
+              onError={() => {
+                setIsImageLoading(false);
+                setImageHasError(true);
+              }}
               className="max-h-[80vh] max-w-[80vw] object-contain shadow-2xl rounded-lg pointer-events-auto"
             />
+          ) : imageHasError ? (
+            <div className="flex flex-col items-center justify-center p-8 rounded-2xl bg-black/40 border border-white/10 text-neutral-400 space-y-2">
+              <ImageOff className="w-12 h-12 text-neutral-500" />
+              <p className="text-sm">作品原图解析异常或数据链接失效</p>
+              <span className="text-xs font-mono">{artwork.fileName || artwork.title}</span>
+            </div>
           ) : (
             <img
               src={artwork.imageUrl}
               alt={artwork.title}
-              className="max-h-[80vh] max-w-[80vw] object-contain shadow-2xl rounded-lg pointer-events-none"
+              onLoad={() => setIsImageLoading(false)}
+              onError={() => {
+                setIsImageLoading(false);
+                setImageHasError(true);
+              }}
+              className={`max-h-[80vh] max-w-[80vw] object-contain shadow-2xl rounded-lg pointer-events-none transition-opacity duration-300 ${
+                isImageLoading ? 'opacity-0' : 'opacity-100'
+              }`}
             />
           )}
         </div>
@@ -651,14 +723,14 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
             <div className="flex items-center justify-between mb-2">
               <h4 style={{ color: 'var(--text-muted)' }} className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                 <BookPlus className="w-3.5 h-3.5" />
-                关联创作日志 ({relatedDiaries.length})
+                关联创作日记 ({relatedDiaries.length})
               </h4>
               <button
                 onClick={() => onAddDiaryForArtwork(artwork)}
                 style={{ color: 'var(--accent-gold)' }}
                 className="text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80 cursor-pointer"
               >
-                + 写这幅画的日志
+                + 写这幅画的日记
               </button>
             </div>
 
@@ -674,8 +746,15 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                     className="p-3 rounded-xl border text-xs space-y-1"
                   >
                     <div className="flex items-center justify-between font-medium">
-                      <span style={{ color: 'var(--text-main)' }}>{diary.title}</span>
-                      <span style={{ color: 'var(--text-muted)' }} className="font-mono text-[11px]">{diary.date}</span>
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span style={{ color: 'var(--text-main)' }}>{diary.title}</span>
+                        {diary.mood && diary.mood.trim() && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-full border border-amber-500/30 text-amber-600 dark:text-amber-400 shrink-0">
+                            {diary.mood}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ color: 'var(--text-muted)' }} className="font-mono text-[11px] shrink-0">{diary.date}</span>
                     </div>
                     <p style={{ color: 'var(--text-muted)' }} className="line-clamp-2 leading-relaxed font-light">
                       {diary.content}
@@ -694,7 +773,7 @@ export const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({
                 className="w-full text-xs italic p-3 rounded-xl border border-dashed text-center hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <BookPlus className="w-3.5 h-3.5" />
-                尚未记录这幅画的日志，点击添加日记
+                尚未记录这幅画的日记，点击添加日记
               </button>
             )}
           </div>

@@ -617,7 +617,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span>自定义字号大小</span>
             </h2>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              根据视觉习惯调整基准字号，实时提升全站标题、画廊作品与日志的阅读舒适度。
+              根据视觉习惯调整基准字号，实时提升全站标题、画廊作品与日记的阅读舒适度。
             </p>
           </div>
           <button
@@ -659,7 +659,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               “画匣 · 灵感与时间的陈香”
             </div>
             <p className="text-[0.85em] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-              实时字号预览：在此调控全站渲染尺寸，作品标题、标签提示与创作日志将自动依照此缩放比例舒展呈现。
+              实时字号预览：在此调控全站渲染尺寸，作品标题、标签提示与创作日记将自动依照此缩放比例舒展呈现。
             </p>
           </div>
         </div>
@@ -1866,7 +1866,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="p-3 sm:p-3.5 rounded-2xl border space-y-1"
             style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
           >
-            <span className="text-[11px] block" style={{ color: 'var(--text-muted)' }}>创作日志</span>
+            <span className="text-[11px] block" style={{ color: 'var(--text-muted)' }}>创作日记</span>
             <div className="flex items-baseline gap-1">
               <span className="font-art-serif text-lg sm:text-xl font-bold" style={{ color: 'var(--text-main)' }}>
                 {diariesCount}
@@ -2006,7 +2006,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                从此前导出的画匣 JSON 备份文件中完整还原作品库、创作日志与所有自定义外观配置。
+                从此前导出的画匣 JSON 备份文件中完整还原作品库、创作日记与所有自定义外观配置。
               </p>
 
               {/* What's restored checklist */}

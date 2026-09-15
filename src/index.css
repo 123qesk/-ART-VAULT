@@ -117,6 +117,18 @@
     border-color: var(--card-border);
   }
 
+  /* Universal Theme-aware Focus Styles for Input, Textarea, Select */
+  input:focus,
+  input:focus-visible,
+  textarea:focus,
+  textarea:focus-visible,
+  select:focus,
+  select:focus-visible {
+    border-color: var(--accent-gold) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-gold) 30%, transparent) !important;
+  }
+
   /* Style presets: Default, Glassmorphism, Neumorphism, Flat */
   
   /* 0. 默认微光风格 (Default - Subtle Studio Elevation) */

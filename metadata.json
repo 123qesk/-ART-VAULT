@@ -1,6 +1,6 @@
 {
   "name": "画匣 · ART VAULT",
-  "description": "画师个人的数字作品档案馆，支持作品保存、整理、大图鉴赏与创作日志记录。",
+  "description": "画师个人的数字作品档案馆，支持作品保存、整理、大图鉴赏与创作日记记录。",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

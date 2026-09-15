@@ -56,6 +56,7 @@ export interface DiaryEntry {
   artworkTitle?: string;
   artworkThumbnail?: string;
   tags?: string[];
+  mood?: string; // Custom or preset mood (e.g. 🎨 专注心流, ✨ 灵感迸发, etc.)
   media?: DiaryMediaItem[];
   createdAt: string;
   updatedAt: string;

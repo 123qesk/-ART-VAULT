@@ -316,6 +316,9 @@ export default function App() {
             setIsAddModalOpen(true);
           }}
           artworksCount={artworks.length}
+          artworks={artworks}
+          diaries={diaries}
+          onSelectArtwork={(art) => setSelectedArtworkDetail(art)}
         />
 
         {/* Main Content Router */}
@@ -371,6 +374,8 @@ export default function App() {
             <DiaryView
               diaries={diaries}
               artworks={artworks}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
               onSaveDiary={handleSaveDiary}
               onDeleteDiary={handleDeleteDiary}
               onSelectArtwork={(art) => setSelectedArtworkDetail(art)}

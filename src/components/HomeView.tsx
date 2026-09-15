@@ -960,10 +960,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 >
                   <div>
                     <div className="flex items-center justify-between text-xs font-mono mb-2" style={{ color: 'var(--text-muted)' }}>
-                      <span className="font-semibold flex items-center gap-1" style={{ color: 'var(--accent-gold)' }}>
-                        <Clock className="w-3.5 h-3.5" />
-                        {formattedDate}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold flex items-center gap-1" style={{ color: 'var(--accent-gold)' }}>
+                          <Clock className="w-3.5 h-3.5" />
+                          {formattedDate}
+                        </span>
+                        {entry.mood && entry.mood.trim() && (
+                          <span 
+                            className="text-[10px] px-2 py-0.5 rounded-full border shadow-2xs font-sans"
+                            style={{
+                              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 12%, var(--card-bg))',
+                              borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                              color: 'var(--accent-gold)',
+                            }}
+                          >
+                            {entry.mood}
+                          </span>
+                        )}
+                      </div>
                       {entry.artworkTitle && (
                         <span>关联: {entry.artworkTitle}</span>
                       )}
@@ -1008,7 +1022,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               color: 'var(--text-muted)',
             }}
           >
-            暂无创作日志，点击导航栏「创作日志」随时写下笔触思考。
+            暂无创作日记，点击导航栏「创作日记」随时写下笔触思考。
           </div>
         )}
       </section>

@@ -1825,7 +1825,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                             </div>
 
                             {/* Mode Selector Tabs */}
-                            <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 text-xs">
+                            <div 
+                              className="grid grid-cols-4 gap-1 p-1 rounded-xl border text-xs"
+                              style={{
+                                backgroundColor: 'var(--search-bg)',
+                                borderColor: 'var(--card-border)',
+                              }}
+                            >
                               {[
                                 { mode: 'all', label: '全部' },
                                 { mode: 'month', label: '按月份' },
@@ -1843,12 +1849,14 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                           color: 'var(--accent-gold)',
                                           boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                                         }
-                                      : undefined
+                                      : {
+                                          color: 'var(--text-muted)',
+                                        }
                                   }
                                   className={`py-1.5 px-1 text-center rounded-lg font-medium transition-all cursor-pointer ${
                                     timelineDateMode === item.mode
                                       ? 'font-bold'
-                                      : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                                      : 'hover:opacity-80'
                                   }`}
                                 >
                                   {item.label}
@@ -1860,7 +1868,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                             {timelineDateMode === 'month' && (
                               <div className="space-y-2.5 pt-1">
                                 <div className="flex items-center justify-between">
-                                  <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                  <label className="text-xs block font-medium" style={{ color: 'var(--text-muted)' }}>
                                     选择年份与月份：
                                   </label>
                                   <span className="text-xs font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
@@ -1880,14 +1888,14 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                         setTimelineFilterMonth(`${yr}-${m}`);
                                       }}
                                       style={{
-                                        borderColor: timelineFilterMonth.startsWith(yr) ? 'var(--accent-gold)' : undefined,
-                                        backgroundColor: timelineFilterMonth.startsWith(yr) ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : undefined,
-                                        color: timelineFilterMonth.startsWith(yr) ? 'var(--accent-gold)' : undefined,
+                                        borderColor: timelineFilterMonth.startsWith(yr) ? 'var(--accent-gold)' : 'var(--card-border)',
+                                        backgroundColor: timelineFilterMonth.startsWith(yr) ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : 'var(--search-bg)',
+                                        color: timelineFilterMonth.startsWith(yr) ? 'var(--accent-gold)' : 'var(--text-main)',
                                       }}
                                       className={`px-2.5 py-1 rounded-lg text-xs font-mono border shrink-0 transition-all cursor-pointer ${
                                         timelineFilterMonth.startsWith(yr)
                                           ? 'font-bold shadow-2xs'
-                                          : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400'
+                                          : 'hover:opacity-80'
                                       }`}
                                     >
                                       {yr}年
@@ -1912,13 +1920,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                         style={{
                                           backgroundColor: isSelected 
                                             ? 'var(--accent-gold)' 
-                                            : (count > 0 ? 'color-mix(in srgb, var(--accent-gold) 8%, transparent)' : undefined),
+                                            : (count > 0 ? 'color-mix(in srgb, var(--accent-gold) 8%, var(--search-bg))' : 'var(--search-bg)'),
                                           borderColor: isSelected 
                                             ? 'var(--accent-gold)' 
                                             : 'var(--card-border)',
                                         }}
                                         className={`py-1.5 px-1 rounded-xl text-xs border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
-                                          isSelected ? 'font-bold shadow-xs' : 'hover:border-amber-400'
+                                          isSelected ? 'font-bold shadow-xs' : 'hover:opacity-80'
                                         }`}
                                       >
                                         <span 
@@ -1929,7 +1937,12 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                         >
                                           {mNum}月
                                         </span>
-                                        <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-neutral-400'}`}>
+                                        <span 
+                                          className="text-[10px] font-mono"
+                                          style={{
+                                            color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)',
+                                          }}
+                                        >
                                           {count > 0 ? `${count}件` : '-'}
                                         </span>
                                       </button>
@@ -1938,7 +1951,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                 </div>
 
                                 {/* Manual month input */}
-                                <div className="pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                                <div className="pt-1 border-t" style={{ borderColor: 'var(--card-border)' }}>
                                   <input
                                     type="month"
                                     value={timelineFilterMonth}
@@ -1957,7 +1970,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                             {timelineDateMode === 'year' && (
                               <div className="space-y-3 pt-1">
                                 <div className="space-y-1.5">
-                                  <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                  <label className="text-xs block font-medium" style={{ color: 'var(--text-muted)' }}>
                                     选择要展示的年份：
                                   </label>
                                   <div className="grid grid-cols-3 gap-2">
@@ -1969,14 +1982,14 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                           type="button"
                                           onClick={() => setTimelineFilterYear(yr)}
                                           style={{
-                                            borderColor: isSelected ? 'var(--accent-gold)' : undefined,
-                                            backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : undefined,
-                                            color: isSelected ? 'var(--accent-gold)' : undefined,
+                                            borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+                                            backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : 'var(--search-bg)',
+                                            color: isSelected ? 'var(--accent-gold)' : 'var(--text-main)',
                                           }}
                                           className={`py-2 px-3 rounded-xl text-xs font-mono border transition-all cursor-pointer ${
                                             isSelected
                                               ? 'font-bold shadow-2xs'
-                                              : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300'
+                                              : 'hover:opacity-80'
                                           }`}
                                         >
                                           {yr} 年
@@ -1987,9 +2000,9 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                 </div>
 
                                 {/* Display Months overview with theme-colored month numbers */}
-                                <div className="space-y-1.5 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                                <div className="space-y-1.5 pt-1 border-t" style={{ borderColor: 'var(--card-border)' }}>
                                   <div className="flex items-center justify-between">
-                                    <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                    <label className="text-xs block font-medium" style={{ color: 'var(--text-muted)' }}>
                                       {timelineFilterYear} 年各月份作品概览：
                                     </label>
                                     <span className="text-[10px]" style={{ color: 'var(--accent-gold)' }}>
@@ -2014,7 +2027,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                           style={{
                                             backgroundColor: isCurrentMonthFilter 
                                               ? 'color-mix(in srgb, var(--accent-gold) 20%, transparent)' 
-                                              : 'color-mix(in srgb, var(--accent-gold) 6%, transparent)',
+                                              : 'color-mix(in srgb, var(--accent-gold) 6%, var(--search-bg))',
                                             borderColor: isCurrentMonthFilter 
                                               ? 'var(--accent-gold)' 
                                               : 'color-mix(in srgb, var(--accent-gold) 20%, transparent)',
@@ -2028,7 +2041,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                           >
                                             {monthNum}月
                                           </span>
-                                          <span className="text-[10px] font-mono text-neutral-400">
+                                          <span 
+                                            className="text-[10px] font-mono"
+                                            style={{ color: 'var(--text-muted)' }}
+                                          >
                                             {count > 0 ? `${count}件` : '-'}
                                           </span>
                                         </button>
@@ -2042,7 +2058,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                             {timelineDateMode === 'range' && (
                               <div className="space-y-3 pt-1">
                                 <div className="space-y-1.5">
-                                  <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                  <label className="text-xs block font-medium" style={{ color: 'var(--text-muted)' }}>
                                     起始日期：
                                   </label>
                                   <input
@@ -2058,7 +2074,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                   />
                                 </div>
                                 <div className="space-y-1.5">
-                                  <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                  <label className="text-xs block font-medium" style={{ color: 'var(--text-muted)' }}>
                                     截止日期：
                                   </label>
                                   <input
@@ -2090,7 +2106,12 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                         setTimelineRangeEnd(end.toISOString().slice(0, 10));
                                         setTimelineRangeStart(start.toISOString().slice(0, 10));
                                       }}
-                                      className="px-2 py-1 rounded-lg text-[11px] border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                                      style={{
+                                        borderColor: 'var(--card-border)',
+                                        color: 'var(--text-muted)',
+                                        backgroundColor: 'var(--search-bg)',
+                                      }}
+                                      className="px-2 py-1 rounded-lg text-[11px] border border-dashed hover:opacity-80 cursor-pointer"
                                     >
                                       {preset.label}
                                     </button>
@@ -2109,7 +2130,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                   setTimelineRangeEnd('');
                                   setIsTimelineDatePickerOpen(false);
                                 }}
-                                className="text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 cursor-pointer"
+                                className="text-xs hover:opacity-80 cursor-pointer"
+                                style={{ color: 'var(--text-muted)' }}
                               >
                                 重置显示全部
                               </button>
@@ -2334,24 +2356,75 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               </div>
               <div className="space-y-1">
                 <h3 className="font-art-serif text-lg font-bold" style={{ color: 'var(--text-main)' }}>
-                  {selectedCategory === 'trash' ? '回收站中没有任何作品' : '未找到符合条件的作品'}
+                  {selectedCategory === 'trash' 
+                    ? '回收站中没有任何作品' 
+                    : layoutMode === 'timeline' && timelineDateMode !== 'all'
+                    ? `在所选时间（${timelineDateMode === 'year' ? `${timelineFilterYear}年` : timelineDateMode === 'month' ? `${timelineFilterMonth}` : `${timelineRangeStart || '开始'} ~ ${timelineRangeEnd || '结束'}`}）内暂无作品`
+                    : '未找到符合条件的作品'}
                 </h3>
                 <p className="text-xs max-w-sm mx-auto" style={{ color: 'var(--text-muted)' }}>
                   {selectedCategory === 'trash'
                     ? '平时删除的作品会暂存在这里，方便画师随时恢复。'
+                    : layoutMode === 'timeline' && timelineDateMode !== 'all'
+                    ? '所选时间区间内尚未收录任何作品，您可以点击下方按钮清除日期筛选，或切换其他时间范围。'
                     : '您可以清除筛选条件，或直接添加新的绘画或源文件。'}
                 </p>
               </div>
 
               {selectedCategory !== 'trash' && (
-                <div className="flex items-center justify-center gap-3 pt-2">
-                  {(searchQuery || selectedTag || dateFilter !== 'all' || statusFilter !== 'all' || selectedCategory !== 'all') && (
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  {/* Timeline Date Filter Clear Button */}
+                  {layoutMode === 'timeline' && timelineDateMode !== 'all' && (
                     <button
+                      type="button"
+                      onClick={() => {
+                        setTimelineDateMode('all');
+                        setTimelineRangeStart('');
+                        setTimelineRangeEnd('');
+                      }}
+                      style={{
+                        backgroundColor: 'var(--accent-gold)',
+                        color: '#FFFFFF',
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold shadow-xs hover:opacity-90 transition-all cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>清除日期筛选 (查看全部作品)</span>
+                    </button>
+                  )}
+
+                  {/* General Date Filter Clear Button */}
+                  {(dateFilter !== 'all' || customDate) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDateFilter('all');
+                        setCustomDate('');
+                      }}
+                      style={{
+                        backgroundColor: 'var(--accent-gold)',
+                        color: '#FFFFFF',
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold shadow-xs hover:opacity-90 transition-all cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>清除日期筛选</span>
+                    </button>
+                  )}
+
+                  {/* Reset All Filters Button */}
+                  {(searchQuery || selectedTag || dateFilter !== 'all' || customDate || statusFilter !== 'all' || selectedCategory !== 'all' || (layoutMode === 'timeline' && timelineDateMode !== 'all')) && (
+                    <button
+                      type="button"
                       onClick={() => {
                         setSelectedCategory('all');
                         setStatusFilter('all');
                         setSelectedTag('');
                         setDateFilter('all');
+                        setCustomDate('');
+                        setTimelineDateMode('all');
+                        setTimelineRangeStart('');
+                        setTimelineRangeEnd('');
                         onSearchChange('');
                       }}
                       style={{
@@ -2359,18 +2432,22 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                         borderColor: 'var(--card-border)',
                         color: 'var(--text-main)',
                       }}
-                      className="px-4 py-2 rounded-xl border text-xs font-medium hover:opacity-80 transition-colors"
+                      className="px-4 py-2 rounded-xl border text-xs font-medium hover:opacity-80 transition-colors cursor-pointer"
                     >
                       重置所有筛选
                     </button>
                   )}
+
                   <button
                     onClick={onOpenAddModal}
                     style={{
-                      backgroundColor: 'var(--accent-gold)',
-                      color: '#FFFFFF',
+                      backgroundColor: layoutMode === 'timeline' && timelineDateMode !== 'all' ? 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))' : 'var(--accent-gold)',
+                      borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                      color: layoutMode === 'timeline' && timelineDateMode !== 'all' ? 'var(--accent-gold)' : '#FFFFFF',
                     }}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold shadow-xs hover:opacity-90 transition-all"
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold shadow-xs hover:opacity-90 transition-all cursor-pointer ${
+                      layoutMode === 'timeline' && timelineDateMode !== 'all' ? 'border' : ''
+                    }`}
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>添加作品</span>
