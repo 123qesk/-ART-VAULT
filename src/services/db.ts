@@ -209,6 +209,29 @@ class ArtVaultDatabase {
     }
   }
 
+  async batchUpdateArtworkCategory(
+    ids: string[],
+    targetCategory: string
+  ): Promise<void> {
+    const db = await this.getDB();
+    const tx = db.transaction('artworks', 'readwrite');
+    const store = tx.objectStore('artworks');
+
+    for (const id of ids) {
+      const art = await this.getArtworkById(id);
+      if (!art) continue;
+
+      art.type = targetCategory;
+      art.updatedAt = new Date().toISOString();
+      store.put(art);
+    }
+
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
   async batchUpdateArtworkTags(
     ids: string[],
     action: 'add' | 'remove' | 'set',
@@ -380,6 +403,19 @@ class ArtVaultDatabase {
     const fontSize = Number(localStorage.getItem('art_vault_font_size_v1')) || 16;
     const activePresetId = localStorage.getItem('art_vault_active_preset_id_v1') || null;
 
+    // Artist Profile Settings
+    const artistProfile = {
+      avatar: localStorage.getItem('art_vault_artist_avatar') || (await this.getSetting<string>('artist_avatar')) || '',
+      name: localStorage.getItem('art_vault_artist_name') || '',
+      signature: localStorage.getItem('art_vault_artist_signature') || '',
+      role: localStorage.getItem('art_vault_artist_role') || '',
+      status: localStorage.getItem('art_vault_artist_status') || '',
+      greetingTitle: localStorage.getItem('art_vault_greeting_title') || '',
+      greetingSubtitle: localStorage.getItem('art_vault_greeting_subtitle') || '',
+      archiveTitle: localStorage.getItem('art_vault_archive_title') || '',
+    };
+    const customTags = localStorage.getItem('art_vault_all_available_tags') || localStorage.getItem('art_vault_custom_user_tags') || '';
+
     const payload = {
       version: 3,
       appName: '画匣 · ART VAULT',
@@ -390,6 +426,8 @@ class ArtVaultDatabase {
       statuses,
       presets,
       themePalettes,
+      artistProfile,
+      customTags,
       themeSettings: {
         theme: currentTheme,
         displayMode,
@@ -429,6 +467,31 @@ class ArtVaultDatabase {
     }
     if (data.statuses && Array.isArray(data.statuses)) {
       this.saveStatuses(data.statuses);
+    }
+
+    // Restore Artist Profile safely
+    if (data.artistProfile && typeof data.artistProfile === 'object') {
+      const p = data.artistProfile;
+      if (typeof p.avatar === 'string' && p.avatar.trim() && p.avatar !== 'undefined' && p.avatar !== 'null') {
+        localStorage.setItem('art_vault_artist_avatar', p.avatar);
+        await this.saveSetting('artist_avatar', p.avatar);
+      }
+      if (p.name && typeof p.name === 'string') localStorage.setItem('art_vault_artist_name', p.name);
+      if (p.signature && typeof p.signature === 'string') localStorage.setItem('art_vault_artist_signature', p.signature);
+      if (p.role && typeof p.role === 'string') localStorage.setItem('art_vault_artist_role', p.role);
+      if (p.status && typeof p.status === 'string') localStorage.setItem('art_vault_artist_status', p.status);
+      if (p.greetingTitle && typeof p.greetingTitle === 'string') localStorage.setItem('art_vault_greeting_title', p.greetingTitle);
+      if (p.greetingSubtitle && typeof p.greetingSubtitle === 'string') localStorage.setItem('art_vault_greeting_subtitle', p.greetingSubtitle);
+      if (p.archiveTitle && typeof p.archiveTitle === 'string') localStorage.setItem('art_vault_archive_title', p.archiveTitle);
+    }
+
+    // Restore Custom Tags
+    if (data.customTags) {
+      if (typeof data.customTags === 'string') {
+        localStorage.setItem('art_vault_all_available_tags', data.customTags);
+      } else if (Array.isArray(data.customTags)) {
+        localStorage.setItem('art_vault_all_available_tags', JSON.stringify(data.customTags));
+      }
     }
 
     // Restore Custom Theme Presets (自定义美化预设)
@@ -475,8 +538,9 @@ class ArtVaultDatabase {
       }
     }
 
-    // Trigger theme update notification
+    // Trigger theme & profile update notifications
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('art_vault_artist_updated'));
       window.dispatchEvent(new Event('art_vault_theme_reloaded'));
     }
 

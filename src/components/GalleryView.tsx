@@ -25,7 +25,8 @@ import {
   CheckSquare,
   Square,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FolderInput
 } from 'lucide-react';
 import { Artwork, GalleryLayoutMode, CategoryItem, StatusItem } from '../types';
 import { useTheme } from '../context/ThemeContext';
@@ -50,11 +51,13 @@ interface GalleryViewProps {
   onBatchSoftDelete?: (ids: string[]) => void;
   onBatchRestore?: (ids: string[]) => void;
   onBatchPermanentDelete?: (ids: string[]) => void;
+  onBatchUpdateCategory?: (ids: string[], targetCategory: string) => Promise<void>;
   onBatchUpdateTags?: (ids: string[], action: 'add' | 'remove' | 'set', tags: string[]) => Promise<void>;
   onEmptyRecycleBin: () => void;
   onOpenAddModal: () => void;
   categories: CategoryItem[];
   statuses: StatusItem[];
+  onAddCategory?: (name: string) => void;
   onUpdateCategories: (categories: CategoryItem[]) => void;
   onUpdateStatuses: (statuses: StatusItem[]) => void;
 }
@@ -352,11 +355,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   onBatchSoftDelete,
   onBatchRestore,
   onBatchPermanentDelete,
+  onBatchUpdateCategory,
   onBatchUpdateTags,
   onEmptyRecycleBin,
   onOpenAddModal,
   categories,
   statuses,
+  onAddCategory,
   onUpdateCategories,
   onUpdateStatuses,
 }) => {
@@ -632,6 +637,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     return Array.from(yearSet).sort((a, b) => b.localeCompare(a));
   }, [artworks]);
 
+  // Batch Category Change State (Requirement 1 & 4)
+  const [isBatchCategoryModalOpen, setIsBatchCategoryModalOpen] = useState(false);
+  const [targetCategoryForBatch, setTargetCategoryForBatch] = useState<string>('');
+  const [isAddingCategoryInBatch, setIsAddingCategoryInBatch] = useState(false);
+  const [newCategoryNameInBatch, setNewCategoryNameInBatch] = useState('');
+  const [isSubmittingBatchCategory, setIsSubmittingBatchCategory] = useState(false);
+
   // Batch Tag Editing State
   const [isBatchTagModalOpen, setIsBatchTagModalOpen] = useState(false);
   const [batchTagAction, setBatchTagAction] = useState<'add' | 'remove' | 'set'>('add');
@@ -639,16 +651,42 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   const [selectedTagsForBatch, setSelectedTagsForBatch] = useState<string[]>([]);
   const [isSubmittingBatchTags, setIsSubmittingBatchTags] = useState(false);
 
+  // Built-in default tags constant
+  const DEFAULT_BUILTIN_TAGS = useMemo(() => ['原创', '人物', '夜景', '场景', '厚涂', '二次元', '光影练习', '写生', '赛博朋克', '自然'], []);
+
   // All unique tags in the artwork library for quick selection
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>();
     artworks.forEach((art) => {
       if (art.tags) {
-        art.tags.forEach((t) => tagSet.add(t.trim()));
+        art.tags.forEach((t) => {
+          const clean = t.replace(/^#/, '').trim();
+          if (clean) tagSet.add(clean);
+        });
       }
     });
     return Array.from(tagSet).filter(Boolean);
   }, [artworks]);
+
+  // Combined built-in and user custom shortcut tags for batch editing
+  const allAvailableQuickTags = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('art_vault_all_available_tags');
+      if (saved) {
+        const parsed: string[] = JSON.parse(saved);
+        return Array.from(new Set([...DEFAULT_BUILTIN_TAGS, ...parsed, ...existingTags])).filter(Boolean);
+      }
+      const oldCustom = localStorage.getItem('art_vault_custom_user_tags');
+      const customList: string[] = oldCustom ? JSON.parse(oldCustom) : [];
+      return Array.from(new Set([...DEFAULT_BUILTIN_TAGS, ...customList, ...existingTags])).filter(Boolean);
+    } catch {
+      return Array.from(new Set([...DEFAULT_BUILTIN_TAGS, ...existingTags])).filter(Boolean);
+    }
+  }, [existingTags, DEFAULT_BUILTIN_TAGS]);
+
+  const customQuickTagsOnly = useMemo(() => {
+    return allAvailableQuickTags.filter((t) => !DEFAULT_BUILTIN_TAGS.includes(t));
+  }, [allAvailableQuickTags, DEFAULT_BUILTIN_TAGS]);
 
   // Common tags among selected artworks
   const selectedArtworksCommonTags = useMemo(() => {
@@ -657,7 +695,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     const tagCounts = new Map<string, number>();
     selectedArts.forEach((a) => {
       if (a.tags) {
-        const uniqueTags = Array.from(new Set(a.tags));
+        const uniqueTags = Array.from(new Set(a.tags.map((t) => t.replace(/^#/, '').trim()))).filter(Boolean);
         uniqueTags.forEach((t: string) => {
           tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
         });
@@ -668,6 +706,18 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
       count,
       isAll: count === selectedArts.length,
     }));
+  }, [selectedArtworkIds, artworks]);
+
+  // Category distribution of selected artworks
+  const selectedArtworksCategoryCounts = useMemo(() => {
+    if (selectedArtworkIds.length === 0) return [];
+    const selectedArts = artworks.filter((a) => selectedArtworkIds.includes(a.id));
+    const catMap = new Map<string, number>();
+    selectedArts.forEach((a) => {
+      const c = a.type || '未分类';
+      catMap.set(c, (catMap.get(c) || 0) + 1);
+    });
+    return Array.from(catMap.entries()).map(([name, count]) => ({ name, count }));
   }, [selectedArtworkIds, artworks]);
 
   // Timeline Grouping Logic by Year & Month (Fast slice-based parser)
@@ -709,6 +759,49 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
       items: map.get(key)!,
     }));
   }, [filteredArtworks, layoutMode]);
+
+  const handleApplyBatchCategory = async () => {
+    if (selectedArtworkIds.length === 0 || !targetCategoryForBatch) {
+      alert('请选择目标分类');
+      return;
+    }
+
+    try {
+      setIsSubmittingBatchCategory(true);
+      if (onBatchUpdateCategory) {
+        await onBatchUpdateCategory(selectedArtworkIds, targetCategoryForBatch);
+      }
+      setIsBatchCategoryModalOpen(false);
+      setIsMultiSelectMode(false);
+      setSelectedArtworkIds([]);
+    } catch (err) {
+      console.error(err);
+      alert('批量更改分类失败，请重试');
+    } finally {
+      setIsSubmittingBatchCategory(false);
+    }
+  };
+
+  const handleCreateNewCategoryInBatch = () => {
+    const trimmed = newCategoryNameInBatch.trim();
+    if (!trimmed) return;
+    if (categories.some((c) => c.name === trimmed)) {
+      setTargetCategoryForBatch(trimmed);
+      setIsAddingCategoryInBatch(false);
+      setNewCategoryNameInBatch('');
+      return;
+    }
+    const newCat: CategoryItem = {
+      id: `cat_${Date.now()}`,
+      name: trimmed,
+      isDefault: false,
+    };
+    const updated = [...categories, newCat];
+    onUpdateCategories(updated);
+    setTargetCategoryForBatch(trimmed);
+    setIsAddingCategoryInBatch(false);
+    setNewCategoryNameInBatch('');
+  };
 
   const handleApplyBatchTags = async () => {
     if (selectedArtworkIds.length === 0) return;
@@ -1378,6 +1471,28 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   </>
                 ) : (
                   <>
+                    {/* 1. 批量更改分类 (排在批量编辑标签前面) */}
+                    <button
+                      disabled={selectedArtworkIds.length === 0}
+                      onClick={() => {
+                        if (selectedArtworkIds.length === 0) return;
+                        const firstSelected = artworks.find((a) => selectedArtworkIds.includes(a.id));
+                        setTargetCategoryForBatch(firstSelected?.type || categories[0]?.name || '插画');
+                        setIsBatchCategoryModalOpen(true);
+                      }}
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))',
+                        borderColor: 'var(--accent-gold)',
+                        color: 'var(--accent-gold)',
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl border disabled:opacity-40 shadow-xs transition-all hover:opacity-90 cursor-pointer"
+                      title="批量将选中作品移动至新分类"
+                    >
+                      <FolderInput className="w-4 h-4" />
+                      <span>批量更改分类 ({selectedArtworkIds.length})</span>
+                    </button>
+
+                    {/* 2. 批量编辑标签 */}
                     <button
                       disabled={selectedArtworkIds.length === 0}
                       onClick={() => setIsBatchTagModalOpen(true)}
@@ -1386,13 +1501,14 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                         borderColor: 'var(--accent-gold)',
                         color: 'var(--accent-gold)',
                       }}
-                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl border disabled:opacity-40 shadow-xs transition-all hover:opacity-90"
+                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl border disabled:opacity-40 shadow-xs transition-all hover:opacity-90 cursor-pointer"
                       title="批量添加或移除选中作品的标签"
                     >
                       <Tag className="w-4 h-4" />
                       <span>批量编辑标签 ({selectedArtworkIds.length})</span>
                     </button>
 
+                    {/* 3. 批量删除 */}
                     <button
                       disabled={selectedArtworkIds.length === 0}
                       onClick={() => {
@@ -1401,7 +1517,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                         setSelectedArtworkIds([]);
                         setIsMultiSelectMode(false);
                       }}
-                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white shadow-sm transition-all"
+                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white shadow-sm transition-all cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                       <span>批量删除 ({selectedArtworkIds.length})</span>
@@ -2378,27 +2494,113 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               </div>
 
               {/* Input New Tags */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold flex items-center justify-between" style={{ color: 'var(--text-main)' }}>
-                  <span>手动输入标签 (支持逗号/空格分隔)</span>
-                </label>
-                <input
-                  type="text"
-                  value={batchTagsInput}
-                  onChange={(e) => setBatchTagsInput(e.target.value)}
-                  placeholder="如: 水彩, 赛博朋克, 角色设计"
-                  className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 transition-all"
-                  style={{
-                    backgroundColor: 'var(--search-bg)',
-                    borderColor: 'var(--card-border)',
-                    color: 'var(--text-main)',
-                  }}
-                />
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold flex items-center justify-between" style={{ color: 'var(--text-main)' }}>
+                    <span>手动输入标签 (支持逗号/空格分隔)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={batchTagsInput}
+                    onChange={(e) => setBatchTagsInput(e.target.value)}
+                    placeholder="如: 水彩, 赛博朋克, 角色设计"
+                    className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 transition-all"
+                    style={{
+                      backgroundColor: 'var(--search-bg)',
+                      borderColor: 'var(--card-border)',
+                      color: 'var(--text-main)',
+                    }}
+                  />
+                </div>
+
+                {/* Built-in and Custom Shortcut Tags Options (Requirement 2) */}
+                <div 
+                  className="p-3 rounded-2xl border space-y-3"
+                  style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+                >
+                  <div className="flex items-center justify-between text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
+                      快捷标签选项 (点击快速添加/填入)
+                    </span>
+                    <span className="text-[11px] font-mono opacity-60">共 {allAvailableQuickTags.length} 个</span>
+                  </div>
+
+                  {/* 1. Built-in Preset Tags */}
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-semibold flex items-center gap-1" style={{ color: 'var(--accent-gold)' }}>
+                      <span>✨ 内置常用标签</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DEFAULT_BUILTIN_TAGS.map((tag) => {
+                        const isSelected = selectedTagsForBatch.includes(tag) || batchTagsInput.split(/[,，\s]+/).map(t => t.replace(/^#/, '').trim()).includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTagsForBatch((prev) =>
+                                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                              );
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1 cursor-pointer"
+                            style={{
+                              backgroundColor: isSelected
+                                ? 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))'
+                                : 'var(--search-bg)',
+                              borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+                              color: isSelected ? 'var(--accent-gold)' : 'var(--text-main)',
+                            }}
+                          >
+                            <span>#{tag}</span>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. Custom Shortcut Tags */}
+                  {customQuickTagsOnly.length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-black/5 dark:border-white/5">
+                      <div className="text-[11px] font-semibold flex items-center gap-1" style={{ color: 'var(--text-main)' }}>
+                        <Tag className="w-3 h-3" style={{ color: 'var(--accent-gold)' }} />
+                        <span>🏷️ 画师自定义与常用标签</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-0.5">
+                        {customQuickTagsOnly.map((tag) => {
+                          const isSelected = selectedTagsForBatch.includes(tag) || batchTagsInput.split(/[,，\s]+/).map(t => t.replace(/^#/, '').trim()).includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTagsForBatch((prev) =>
+                                  prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                                );
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1 cursor-pointer"
+                              style={{
+                                backgroundColor: isSelected
+                                  ? 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))'
+                                  : 'var(--search-bg)',
+                                borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+                                color: isSelected ? 'var(--accent-gold)' : 'var(--text-main)',
+                              }}
+                            >
+                              <span>#{tag}</span>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Tag Pickers */}
-              {batchTagAction === 'remove' ? (
-                /* Remove Mode: Show tags present on selected artworks */
+              {/* Tag Pickers for Remove Mode */}
+              {batchTagAction === 'remove' && (
                 <div className="space-y-2">
                   <label className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                     点击选择要移除的已有标签 ({selectedArtworksCommonTags.length} 个):
@@ -2420,7 +2622,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                                 prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
                               );
                             }}
-                            className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1"
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1 cursor-pointer"
                             style={{
                               backgroundColor: isSelected
                                 ? 'rgba(239, 68, 68, 0.15)'
@@ -2431,46 +2633,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                           >
                             <span>#{tag}</span>
                             <span className="text-[10px] opacity-70 font-mono">({count})</span>
-                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Add / Set Mode: Show All Existing Tags in Vault */
-                <div className="space-y-2">
-                  <label className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                    点击选取画匣常用标签 ({existingTags.length} 个):
-                  </label>
-                  {existingTags.length === 0 ? (
-                    <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>
-                      画匣中暂无常用标签，直接在上方输入框键入即可。
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1">
-                      {existingTags.map((tag) => {
-                        const isSelected = selectedTagsForBatch.includes(tag);
-                        return (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => {
-                              setSelectedTagsForBatch((prev) =>
-                                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-                              );
-                            }}
-                            className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1"
-                            style={{
-                              backgroundColor: isSelected
-                                ? 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))'
-                                : 'var(--card-bg)',
-                              borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
-                              color: isSelected ? 'var(--accent-gold)' : 'var(--text-main)',
-                            }}
-                          >
-                            <span>#{tag}</span>
                             {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                           </button>
                         );
@@ -2489,7 +2651,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsBatchTagModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-80 transition-opacity"
+                className="px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer"
                 style={{ color: 'var(--text-muted)' }}
               >
                 取消
@@ -2498,10 +2660,204 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 type="button"
                 disabled={isSubmittingBatchTags}
                 onClick={handleApplyBatchTags}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 style={{ backgroundColor: 'var(--accent-gold)' }}
               >
                 {isSubmittingBatchTags ? '处理中...' : '确认应用至选中的作品'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Change Category Modal (Requirement 1 & 4) */}
+      {isBatchCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div 
+            className="w-full max-w-md rounded-3xl border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            style={{ 
+              backgroundColor: 'var(--content-bg)', 
+              borderColor: 'var(--card-border)',
+              color: 'var(--text-main)'
+            }}
+          >
+            {/* Modal Header */}
+            <div 
+              className="p-5 border-b flex items-center justify-between"
+              style={{ borderColor: 'var(--card-border)' }}
+            >
+              <div className="flex items-center gap-2.5">
+                <div 
+                  className="p-2 rounded-xl"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' }}
+                >
+                  <FolderInput className="w-5 h-5" style={{ color: 'var(--accent-gold)' }} />
+                </div>
+                <div>
+                  <h2 className="font-art-serif text-lg font-bold">批量更改分类</h2>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    已选中 <span className="font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>{selectedArtworkIds.length}</span> 件作品
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsBatchCategoryModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-neutral-500/10 transition-colors cursor-pointer"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              {/* Selected Artworks Category Breakdown */}
+              <div 
+                className="p-3 rounded-2xl border text-xs space-y-1.5"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 25%, transparent)',
+                  color: 'var(--text-main)',
+                }}
+              >
+                <div className="font-bold flex items-center gap-1.5" style={{ color: 'var(--accent-gold)' }}>
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>所选作品当前分类分布</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {selectedArtworksCategoryCounts.map((item) => (
+                    <span 
+                      key={item.name}
+                      className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-black/5 dark:bg-white/10"
+                    >
+                      {item.name}: <strong className="font-mono">{item.count}</strong> 件
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Target Category Selection Grid */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold flex items-center justify-between" style={{ color: 'var(--text-main)' }}>
+                  <span>选择目标目标分类</span>
+                  <span className="text-[11px] font-normal" style={{ color: 'var(--text-muted)' }}>
+                    作品将统一移动至此分类
+                  </span>
+                </label>
+
+                <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto p-1">
+                  {categories.map((cat) => {
+                    const isSelected = targetCategoryForBatch === cat.name;
+                    const countInCat = artworks.filter((a) => a.type === cat.name).length;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setTargetCategoryForBatch(cat.name)}
+                        className="p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer"
+                        style={{
+                          backgroundColor: isSelected
+                            ? 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))'
+                            : 'var(--card-bg)',
+                          borderColor: isSelected ? 'var(--accent-gold)' : 'var(--card-border)',
+                          color: isSelected ? 'var(--accent-gold)' : 'var(--text-main)',
+                        }}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Folder className="w-4 h-4 shrink-0" style={{ color: isSelected ? 'var(--accent-gold)' : 'var(--text-muted)' }} />
+                          <span className="text-xs font-bold truncate">{cat.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] font-mono opacity-60">({countInCat})</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" style={{ color: 'var(--accent-gold)' }} />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Add New Category On the Fly */}
+              {isAddingCategoryInBatch ? (
+                <div className="p-3 rounded-2xl border space-y-2" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+                  <label className="text-[11px] font-bold" style={{ color: 'var(--text-main)' }}>新建并直接设为目标分类</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newCategoryNameInBatch}
+                      onChange={(e) => setNewCategoryNameInBatch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateNewCategoryInBatch();
+                        }
+                      }}
+                      placeholder="输入新分类名称..."
+                      className="flex-1 px-3 py-1.5 rounded-xl border text-xs focus:outline-none focus:ring-1"
+                      style={{
+                        backgroundColor: 'var(--search-bg)',
+                        borderColor: 'var(--card-border)',
+                        color: 'var(--text-main)',
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateNewCategoryInBatch}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold text-white cursor-pointer"
+                      style={{ backgroundColor: 'var(--accent-gold)' }}
+                    >
+                      添加
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingCategoryInBatch(false);
+                        setNewCategoryNameInBatch('');
+                      }}
+                      className="px-2 py-1.5 text-xs text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsAddingCategoryInBatch(true)}
+                  className="w-full py-2 px-3 rounded-xl border border-dashed text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors hover:opacity-80 cursor-pointer"
+                  style={{
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--accent-gold)',
+                  }}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>新建自定义分类</span>
+                </button>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div 
+              className="p-4 border-t flex items-center justify-end gap-2.5"
+              style={{ borderColor: 'var(--card-border)' }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsBatchCategoryModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingBatchCategory || !targetCategoryForBatch}
+                onClick={handleApplyBatchCategory}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                style={{ backgroundColor: 'var(--accent-gold)' }}
+              >
+                {isSubmittingBatchCategory ? '移动中...' : `移动至「${targetCategoryForBatch || '所选分类'}」`}
               </button>
             </div>
           </div>

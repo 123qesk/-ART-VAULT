@@ -87,18 +87,51 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Sync avatar from IndexedDB on component mount to fix resetting across page switches
+  // Sync avatar and profile from storage and listen to backup imports / updates
   useEffect(() => {
-    vaultDB.getSetting<string>('artist_avatar').then((saved) => {
-      if (saved) {
-        setAvatarUrl(saved);
-        try {
-          localStorage.setItem('art_vault_artist_avatar', saved);
-        } catch (e) {
-          // ignore localStorage quota warning
+    const syncProfileFromStorage = () => {
+      vaultDB.getSetting<string>('artist_avatar').then((saved) => {
+        if (saved && saved.trim() && saved !== 'undefined' && saved !== 'null') {
+          setAvatarUrl(saved);
+          try {
+            localStorage.setItem('art_vault_artist_avatar', saved);
+          } catch (e) {
+            // ignore localStorage quota warning
+          }
+        } else {
+          const localAvatar = localStorage.getItem('art_vault_artist_avatar');
+          if (localAvatar && localAvatar.trim() && localAvatar !== 'undefined' && localAvatar !== 'null') {
+            setAvatarUrl(localAvatar);
+          }
         }
-      }
-    });
+      });
+
+      const name = localStorage.getItem('art_vault_artist_name');
+      if (name) setArtistName(name);
+      const sig = localStorage.getItem('art_vault_artist_signature');
+      if (sig) setArtistSignature(sig);
+      const role = localStorage.getItem('art_vault_artist_role');
+      if (role) setArtistRole(role);
+      const status = localStorage.getItem('art_vault_artist_status');
+      if (status) setArtistStatus(status);
+      const gTitle = localStorage.getItem('art_vault_greeting_title');
+      if (gTitle) setGreetingTitle(gTitle);
+      const gSub = localStorage.getItem('art_vault_greeting_subtitle');
+      if (gSub) setGreetingSubtitle(gSub);
+      const aTitle = localStorage.getItem('art_vault_archive_title');
+      if (aTitle) setArchiveTitle(aTitle);
+      const quote = localStorage.getItem('art_vault_art_quote');
+      if (quote) setArtQuote(quote);
+    };
+
+    syncProfileFromStorage();
+
+    window.addEventListener('art_vault_artist_updated', syncProfileFromStorage);
+    window.addEventListener('art_vault_theme_reloaded', syncProfileFromStorage);
+    return () => {
+      window.removeEventListener('art_vault_artist_updated', syncProfileFromStorage);
+      window.removeEventListener('art_vault_theme_reloaded', syncProfileFromStorage);
+    };
   }, []);
 
   // Artist Status State
@@ -275,12 +308,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
           style={{
             backgroundColor: 'var(--content-bg)',
             borderColor: 'var(--card-border)',
+            isolation: 'isolate',
+            transform: 'translateZ(0)',
+            WebkitTransform: 'translateZ(0)',
           }}
         >
-          {/* Subtle background art glow */}
+          {/* Subtle background art glow - GPU safe radial gradient without blur layer tearing */}
           <div 
-            className="absolute top-0 right-0 w-80 h-full opacity-10 pointer-events-none blur-2xl"
-            style={{ backgroundColor: 'var(--accent-gold)' }}
+            className="absolute top-0 right-0 w-80 h-full opacity-10 pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle at top right, var(--accent-gold) 0%, transparent 70%)',
+            }}
           />
 
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -293,12 +331,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     className="w-18 h-18 sm:w-20 sm:h-20 rounded-full p-1 cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 shadow-sm overflow-hidden"
                     style={{
                       background: 'linear-gradient(135deg, var(--accent-gold) 0%, color-mix(in srgb, var(--accent-gold) 40%, transparent) 100%)',
+                      isolation: 'isolate',
+                      transform: 'translateZ(0)',
+                      WebkitTransform: 'translateZ(0)',
                     }}
                     title="点击更换画师头像"
                   >
                     <img
-                      src={avatarUrl}
+                      src={avatarUrl || DEFAULT_AVATAR}
                       alt={artistName}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = DEFAULT_AVATAR;
+                      }}
                       className="w-full h-full rounded-full object-cover bg-white dark:bg-neutral-800"
                     />
                     {/* Camera overlay hover */}

@@ -387,10 +387,22 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
     if (!files || files.length === 0) return;
     setErrorMsg('');
 
-    if (files.length === 1 && batchFiles.length === 0) {
-      // Single file upload
+    // Deduplicate input files by name + size in case the browser/OS passed identical duplicates
+    const uniqueFiles: File[] = [];
+    const seen = new Set<string>();
+    for (const f of files) {
+      const key = `${f.name}_${f.size}_${f.lastModified}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueFiles.push(f);
+      }
+    }
+
+    if (uniqueFiles.length === 1 && batchFiles.length <= 1) {
+      // Single file upload / replacement
       try {
-        const item = await processSingleFile(files[0]);
+        const item = await processSingleFile(uniqueFiles[0]);
+        setBatchFiles([]);
         setSizeBytes(item.sizeBytes);
         setFileName(item.fileName);
         setFileType(item.fileType);
@@ -398,18 +410,16 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
         setImageBlob(item.imageBlob);
         setWidth(item.width);
         setHeight(item.height);
-        if (!title) {
-          setTitle(item.title);
-        }
+        setTitle(item.title);
       } catch (err: any) {
         setErrorMsg(err.message || '文件解析失败');
       }
       return;
     }
 
-    // Multiple files batch upload
+    // Multiple files batch upload or appending to existing batch
     try {
-      const results = await Promise.allSettled(files.map((f) => processSingleFile(f)));
+      const results = await Promise.allSettled(uniqueFiles.map((f) => processSingleFile(f)));
       const successfulItems: BatchFileItem[] = [];
       const failedNames: string[] = [];
 
@@ -417,7 +427,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
         if (res.status === 'fulfilled') {
           successfulItems.push(res.value);
         } else {
-          failedNames.push(files[idx].name);
+          failedNames.push(uniqueFiles[idx].name);
         }
       });
 
@@ -427,15 +437,25 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
 
       if (successfulItems.length > 0) {
         setBatchFiles((prev) => {
-          const combined = [...prev, ...successfulItems];
-          if (!imageUrl && combined.length > 0) {
+          // If we were previously in single mode (batchFiles was empty or 1 item), start a fresh batch with only the new files
+          let baseList = prev.length > 1 ? prev : [];
+          
+          // Deduplicate against existing batch items by fileName and sizeBytes
+          const existingKeys = new Set(baseList.map((item) => `${item.fileName}_${item.sizeBytes}`));
+          const newUniqueItems = successfulItems.filter((item) => !existingKeys.has(`${item.fileName}_${item.sizeBytes}`));
+          
+          const combined = [...baseList, ...(newUniqueItems.length > 0 ? newUniqueItems : successfulItems)];
+          
+          if (combined.length > 0) {
             setImageUrl(combined[0].imageUrl);
             setFileType(combined[0].fileType);
             setFileName(combined[0].fileName);
             setWidth(combined[0].width);
             setHeight(combined[0].height);
             setSizeBytes(combined[0].sizeBytes);
-            if (!title) setTitle(combined[0].title);
+            if (!title || baseList.length <= 1) {
+              setTitle(combined[0].title);
+            }
           }
           return combined;
         });
@@ -457,10 +477,12 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
         setWidth(single.width);
         setHeight(single.height);
         setSizeBytes(single.sizeBytes);
+        return []; // Cleanly transition back to single file mode
       } else if (filtered.length === 0) {
         setImageUrl('');
         setFileName('');
         setTitle('');
+        return [];
       }
       return filtered;
     });
@@ -474,15 +496,19 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(true);
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFilesProcess(Array.from(e.dataTransfer.files));
@@ -554,6 +580,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const parsedTags = tagsInput
       .split(/[\s,，]+/)
@@ -874,6 +901,7 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                 if (e.target.files && e.target.files.length > 0) {
                   handleFilesProcess(Array.from(e.target.files));
                 }
+                e.target.value = '';
               }}
             />
 
@@ -1134,25 +1162,21 @@ export const ArtworkModal: React.FC<ArtworkModalProps> = ({
                       {isSelected ? `✓ #${tag}` : `+#${tag}`}
                     </button>
 
-                    {/* Delete Tag Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTag(tag);
-                      }}
-                      title={`删除标签 #${tag} (内置与自定义均可点击删除)`}
-                      aria-label={`删除标签 #${tag}`}
-                      className={`px-1.5 py-0.5 flex items-center justify-center transition-all cursor-pointer border-l ${
-                        isTagDeleteMode
-                          ? 'bg-rose-500 text-white hover:bg-rose-600 border-rose-400 font-bold'
-                          : isSelected
-                          ? 'hover:bg-black/20 text-white/80 hover:text-white border-white/20'
-                          : 'bg-neutral-100 dark:bg-neutral-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-neutral-400 hover:text-rose-500 border-neutral-200 dark:border-neutral-700'
-                      }`}
-                    >
-                      <X className="w-2.5 h-2.5" />
-                    </button>
+                    {/* Delete Tag Button - Only shown when user clicks "删除标签" button (isTagDeleteMode is true) */}
+                    {isTagDeleteMode && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTag(tag);
+                        }}
+                        title={`删除标签 #${tag}`}
+                        aria-label={`删除标签 #${tag}`}
+                        className="px-1.5 py-0.5 flex items-center justify-center transition-all cursor-pointer border-l bg-rose-500 text-white hover:bg-rose-600 border-rose-400 font-bold"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    )}
                   </div>
                 );
               })}

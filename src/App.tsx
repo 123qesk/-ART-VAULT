@@ -194,6 +194,12 @@ export default function App() {
     showToast(`已成功为 ${ids.length} 件作品批量${actionLabel}标签`);
   };
 
+  const handleBatchUpdateCategory = async (ids: string[], targetCategory: string) => {
+    await vaultDB.batchUpdateArtworkCategory(ids, targetCategory);
+    await refreshData();
+    showToast(`已成功将选中的 ${ids.length} 件作品移动至分类「${targetCategory}」`);
+  };
+
   // Category & Status updates
   const handleUpdateCategories = (newCategories: CategoryItem[]) => {
     vaultDB.saveCategories(newCategories);
@@ -346,6 +352,7 @@ export default function App() {
               onBatchSoftDelete={handleBatchSoftDeleteArtworks}
               onBatchRestore={handleBatchRestoreArtworks}
               onBatchPermanentDelete={handleBatchPermanentDeleteArtworks}
+              onBatchUpdateCategory={handleBatchUpdateCategory}
               onBatchUpdateTags={handleBatchUpdateTags}
               onEmptyRecycleBin={handleEmptyRecycleBin}
               onOpenAddModal={() => {
@@ -354,6 +361,7 @@ export default function App() {
               }}
               categories={categories}
               statuses={statuses}
+              onAddCategory={handleAddCategory}
               onUpdateCategories={handleUpdateCategories}
               onUpdateStatuses={handleUpdateStatuses}
             />
