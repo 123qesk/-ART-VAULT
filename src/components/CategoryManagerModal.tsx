@@ -30,7 +30,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   // Status local state
   const [localStatuses, setLocalStatuses] = useState<StatusItem[]>(statuses);
   const [newStatusName, setNewStatusName] = useState('');
-  const [newStatusColor, setNewStatusColor] = useState('amber');
+  const [newStatusColor, setNewStatusColor] = useState('emerald');
 
   // Tags local state (supports deleting and adding tags, strictly tags only - strips any status names)
   const [localTags, setLocalTags] = useState<string[]>(() => {

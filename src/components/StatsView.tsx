@@ -225,17 +225,17 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
         style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }} className="p-4 sm:p-5 rounded-3xl border shadow-xs space-y-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-300">
-            <Calendar className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-            <span>日期统计范围切换:</span>
+          <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-300 shrink-0 whitespace-nowrap">
+            <Calendar className="w-4 h-4 shrink-0" style={{ color: 'var(--accent-gold)' }} />
+            <span className="whitespace-nowrap">日期统计范围切换:</span>
           </div>
 
           {/* Scope Mode Tabs */}
-          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl text-xs">
+          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl text-xs overflow-x-auto no-scrollbar max-w-full shrink-0">
             <button
               onClick={() => setScopeMode('all')}
               style={scopeMode === 'all' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
+              className={`px-3 py-1.5 rounded-lg transition-all shrink-0 whitespace-nowrap ${
                 scopeMode === 'all'
                   ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -246,7 +246,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             <button
               onClick={() => setScopeMode('year')}
               style={scopeMode === 'year' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
+              className={`px-3 py-1.5 rounded-lg transition-all shrink-0 whitespace-nowrap ${
                 scopeMode === 'year'
                   ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -257,7 +257,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             <button
               onClick={() => setScopeMode('month')}
               style={scopeMode === 'month' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
+              className={`px-3 py-1.5 rounded-lg transition-all shrink-0 whitespace-nowrap ${
                 scopeMode === 'month'
                   ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -268,7 +268,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             <button
               onClick={() => setScopeMode('day')}
               style={scopeMode === 'day' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
+              className={`px-3 py-1.5 rounded-lg transition-all shrink-0 whitespace-nowrap ${
                 scopeMode === 'day'
                   ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -279,7 +279,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
             <button
               onClick={() => setScopeMode('range')}
               style={scopeMode === 'range' ? { backgroundColor: 'var(--accent-gold)', color: '#FFFFFF' } : undefined}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
+              className={`px-3 py-1.5 rounded-lg transition-all shrink-0 whitespace-nowrap ${
                 scopeMode === 'range'
                   ? 'font-bold shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -470,16 +470,16 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
         </div>
 
         {/* Custom Bar Chart */}
-        <div className="pt-6 pb-2">
-          <div className="h-44 flex items-end justify-between gap-2 sm:gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-2">
+        <div className="pt-6 pb-2 overflow-x-auto no-scrollbar">
+          <div className="h-44 min-w-[500px] sm:min-w-0 flex items-end justify-between gap-1 sm:gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-2">
             {monthlyStats.map((item) => {
               const heightPercent = item.count > 0 ? Math.max((item.count / maxMonthCount) * 100, 15) : 4;
               const hasWorks = item.count > 0;
               return (
-                <div key={item.month} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                <div key={item.month} className="flex-1 min-w-[32px] flex flex-col items-center gap-2 group h-full justify-end shrink-0 sm:shrink">
                   {/* Tooltip & Value */}
                   <span 
-                    className="text-[11px] font-mono transition-opacity"
+                    className="text-[11px] font-mono transition-opacity whitespace-nowrap leading-none"
                     style={{
                       color: hasWorks ? 'var(--accent-gold)' : undefined,
                       fontWeight: hasWorks ? 700 : 400,
@@ -502,7 +502,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ artworks, diaries, statuse
                   />
 
                   {/* Label */}
-                  <span className="text-[11px] text-neutral-400 font-mono">
+                  <span className="text-[11px] text-neutral-400 font-mono whitespace-nowrap leading-none text-center block">
                     {item.month}
                   </span>
                 </div>

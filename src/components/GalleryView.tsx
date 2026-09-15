@@ -368,6 +368,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
   const [customDate, setCustomDate] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('pinned_first');
 
+  // Timeline Date & Month Picker states (Requirement 3)
+  const [isTimelineDatePickerOpen, setIsTimelineDatePickerOpen] = useState(false);
+  const [timelineDateMode, setTimelineDateMode] = useState<'all' | 'month' | 'year' | 'range'>('all');
+  const [timelineFilterYear, setTimelineFilterYear] = useState<string>(() => String(new Date().getFullYear()));
+  const [timelineFilterMonth, setTimelineFilterMonth] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [timelineRangeStart, setTimelineRangeStart] = useState<string>('');
+  const [timelineRangeEnd, setTimelineRangeEnd] = useState<string>('');
+
   // Timeline sub-layout (Requirement 3: 瀑布流/网格 vs 列表)
   const [timelineSubLayout, setTimelineSubLayoutState] = useState<'grid' | 'list'>(() => {
     if (typeof window !== 'undefined') {
@@ -554,6 +565,22 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
       }
     }
 
+    // Timeline layout specific date range / month filter (Requirement 3)
+    if (layoutMode === 'timeline' && timelineDateMode !== 'all') {
+      if (timelineDateMode === 'year' && timelineFilterYear) {
+        list = list.filter((a) => (a.date || a.createdAt || '').startsWith(timelineFilterYear));
+      } else if (timelineDateMode === 'month' && timelineFilterMonth) {
+        list = list.filter((a) => (a.date || a.createdAt || '').startsWith(timelineFilterMonth));
+      } else if (timelineDateMode === 'range') {
+        if (timelineRangeStart) {
+          list = list.filter((a) => (a.date || a.createdAt || '').slice(0, 10) >= timelineRangeStart);
+        }
+        if (timelineRangeEnd) {
+          list = list.filter((a) => (a.date || a.createdAt || '').slice(0, 10) <= timelineRangeEnd);
+        }
+      }
+    }
+
     // Sorting: ALWAYS float pinned works to top unless trash
     list.sort((a, b) => {
       if (selectedCategory !== 'trash') {
@@ -573,7 +600,37 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
     });
 
     return list;
-  }, [artworks, deletedArtworks, selectedCategory, statusFilter, searchQuery, selectedTag, dateFilter, customDate, sortOrder]);
+  }, [
+    artworks, 
+    deletedArtworks, 
+    selectedCategory, 
+    statusFilter, 
+    searchQuery, 
+    selectedTag, 
+    dateFilter, 
+    customDate, 
+    sortOrder,
+    layoutMode,
+    timelineDateMode,
+    timelineFilterYear,
+    timelineFilterMonth,
+    timelineRangeStart,
+    timelineRangeEnd
+  ]);
+
+  // Available Years for Timeline Filter
+  const availableTimelineYears = useMemo(() => {
+    const yearSet = new Set<string>();
+    yearSet.add(String(new Date().getFullYear()));
+    artworks.forEach((a) => {
+      const d = a.date || a.createdAt;
+      if (d && d.length >= 4) {
+        const y = d.slice(0, 4);
+        if (!isNaN(Number(y))) yearSet.add(y);
+      }
+    });
+    return Array.from(yearSet).sort((a, b) => b.localeCompare(a));
+  }, [artworks]);
 
   // Batch Tag Editing State
   const [isBatchTagModalOpen, setIsBatchTagModalOpen] = useState(false);
@@ -984,7 +1041,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                   <option value="7days">最近 7 天</option>
                   <option value="30days">最近 30 天</option>
                   <option value="year">今年</option>
-                  <option value="custom">📅 指定日期...</option>
+                  <option value="custom">指定日期</option>
                 </select>
 
                 {/* Custom Date Input Picker */}
@@ -1074,9 +1131,18 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                     setLayoutMode('masonry');
                     setShowMasonryDropdown((prev) => !prev);
                   }}
-                  className={`p-2 rounded-lg transition-all ${
+                  style={
                     layoutMode === 'masonry'
-                      ? 'bg-white dark:bg-neutral-700 shadow-xs text-neutral-900 dark:text-white'
+                      ? {
+                          backgroundColor: 'var(--card-bg)',
+                          color: 'var(--accent-gold)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        }
+                      : undefined
+                  }
+                  className={`p-2 rounded-lg transition-all cursor-pointer ${
+                    layoutMode === 'masonry'
+                      ? 'font-bold'
                       : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
                   title="瀑布流排版 (点击展开列数选择)"
@@ -1092,9 +1158,18 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                     setLayoutMode('list');
                     setShowMasonryDropdown(false);
                   }}
-                  className={`p-2 rounded-lg transition-all ${
+                  style={
                     layoutMode === 'list'
-                      ? 'bg-white dark:bg-neutral-700 shadow-xs text-neutral-900 dark:text-white'
+                      ? {
+                          backgroundColor: 'var(--card-bg)',
+                          color: 'var(--accent-gold)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        }
+                      : undefined
+                  }
+                  className={`p-2 rounded-lg transition-all cursor-pointer ${
+                    layoutMode === 'list'
+                      ? 'font-bold'
                       : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
                   title="列表排版"
@@ -1110,9 +1185,18 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                     setLayoutMode('timeline');
                     setShowMasonryDropdown(false);
                   }}
-                  className={`p-2 rounded-lg transition-all ${
+                  style={
                     layoutMode === 'timeline'
-                      ? 'bg-white dark:bg-neutral-700 shadow-xs text-neutral-900 dark:text-white'
+                      ? {
+                          backgroundColor: 'var(--card-bg)',
+                          color: 'var(--accent-gold)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        }
+                      : undefined
+                  }
+                  className={`p-2 rounded-lg transition-all cursor-pointer ${
+                    layoutMode === 'timeline'
+                      ? 'font-bold'
                       : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
                   title="按年月时间轴纵向排列"
@@ -1125,10 +1209,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                 {showMasonryDropdown && (
                   <div 
                     style={{
-                      backgroundColor: 'var(--content-bg)',
+                      backgroundColor: 'var(--card-bg)',
                       borderColor: 'var(--card-border)',
                     }}
-                    className="absolute top-full right-0 sm:left-0 sm:right-auto mt-2 py-2 px-1.5 rounded-xl border shadow-xl z-40 min-w-[100px] animate-in fade-in zoom-in-95 duration-150"
+                    className="absolute top-full right-0 sm:left-0 sm:right-auto mt-2 py-2 px-1.5 rounded-xl border shadow-xl z-40 min-w-[110px] animate-in fade-in zoom-in-95 duration-150"
                   >
                     <div 
                       style={{ color: 'var(--text-muted)' }}
@@ -1137,31 +1221,35 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                       列数切换
                     </div>
                     <div className="space-y-0.5">
-                      {([1, 2, 3, 4] as const).map((cols) => (
-                        <button
-                          key={cols}
-                          onClick={() => {
-                            setMasonryColumns(cols);
-                            setLayoutMode('masonry');
-                            setShowMasonryDropdown(false);
-                          }}
-                          style={{
-                            color: masonryColumns === cols && layoutMode === 'masonry' ? 'var(--accent-gold)' : 'var(--text-main)',
-                          }}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            cols === 4 ? 'hidden sm:flex' : 'flex'
-                          } ${
-                            masonryColumns === cols && layoutMode === 'masonry'
-                              ? 'bg-amber-500/10 font-bold'
-                              : 'hover:bg-black/5 dark:hover:bg-white/5'
-                          }`}
-                        >
-                          <span className="font-mono font-semibold">{cols}列</span>
-                          {masonryColumns === cols && layoutMode === 'masonry' && (
-                            <span className="text-amber-600 dark:text-amber-400 text-xs ml-2">✓</span>
-                          )}
-                        </button>
-                      ))}
+                      {([1, 2, 3, 4] as const).map((cols) => {
+                        const isSelected = masonryColumns === cols && layoutMode === 'masonry';
+                        return (
+                          <button
+                            key={cols}
+                            onClick={() => {
+                              setMasonryColumns(cols);
+                              setLayoutMode('masonry');
+                              setShowMasonryDropdown(false);
+                            }}
+                            style={{
+                              backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : undefined,
+                              color: isSelected ? 'var(--accent-gold)' : 'var(--text-main)',
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                              cols === 4 ? 'hidden sm:flex' : 'flex'
+                            } ${
+                              isSelected
+                                ? 'font-bold'
+                                : 'hover:bg-black/5 dark:hover:bg-white/5'
+                            }`}
+                          >
+                            <span className="font-mono font-semibold">{cols}列</span>
+                            {isSelected && (
+                              <span className="text-xs ml-2 font-bold" style={{ color: 'var(--accent-gold)' }}>✓</span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1532,13 +1620,395 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
               {layoutMode === 'timeline' && (
                 <div className="space-y-6">
                   {/* Timeline Sub-Layout Toggle Header */}
-                  <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--card-border)' }}>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-                      <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>创作脉络时间轴</span>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: 'var(--card-border)' }}>
+                    <div className="relative flex flex-wrap items-center gap-2">
+                      {/* Interactive Calendar Trigger for Custom Date / Month range (Requirement 3) */}
+                      <button
+                        type="button"
+                        onClick={() => setIsTimelineDatePickerOpen(!isTimelineDatePickerOpen)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs hover:opacity-90 active:scale-95"
+                        style={{
+                          backgroundColor: timelineDateMode !== 'all' 
+                            ? 'color-mix(in srgb, var(--accent-gold) 15%, var(--card-bg))' 
+                            : 'var(--search-bg)',
+                          borderColor: timelineDateMode !== 'all' 
+                            ? 'var(--accent-gold)' 
+                            : 'var(--card-border)',
+                          color: timelineDateMode !== 'all' 
+                            ? 'var(--accent-gold)' 
+                            : 'var(--text-main)',
+                        }}
+                        title="点击选择自定义时间/月份区间"
+                      >
+                        <Calendar className="w-4 h-4 shrink-0" style={{ color: 'var(--accent-gold)' }} />
+                        <span>创作脉络时间轴</span>
+                        {timelineDateMode !== 'all' && (
+                          <span 
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded border"
+                            style={{
+                              backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                              borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                              color: 'var(--accent-gold)',
+                            }}
+                          >
+                            {timelineDateMode === 'year' && `${timelineFilterYear}年`}
+                            {timelineDateMode === 'month' && `${timelineFilterMonth}`}
+                            {timelineDateMode === 'range' && `${timelineRangeStart || '开始'} ~ ${timelineRangeEnd || '结束'}`}
+                          </span>
+                        )}
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isTimelineDatePickerOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
                       <span className="text-[11px] font-mono px-2 py-0.5 rounded-full" style={{ backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))', color: 'var(--accent-gold)' }}>
                         {filteredArtworks.length} 件作品
                       </span>
+
+                      {timelineDateMode !== 'all' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTimelineDateMode('all');
+                            setTimelineRangeStart('');
+                            setTimelineRangeEnd('');
+                          }}
+                          className="text-[11px] px-2 py-1 rounded-lg border flex items-center gap-1 hover:text-red-500 transition-colors cursor-pointer"
+                          style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
+                          title="清除时间筛选"
+                        >
+                          <X className="w-3 h-3" />
+                          <span>重置全部</span>
+                        </button>
+                      )}
+
+                      {/* Timeline Date Picker Dropdown Popover */}
+                      {isTimelineDatePickerOpen && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-40" 
+                            onClick={() => setIsTimelineDatePickerOpen(false)} 
+                          />
+                          <div 
+                            className="absolute left-0 top-full mt-2 z-50 w-76 sm:w-92 p-4 rounded-2xl border shadow-xl space-y-3.5 animate-in fade-in zoom-in-95 duration-150"
+                            style={{
+                              backgroundColor: 'var(--card-bg)',
+                              borderColor: 'var(--card-border)',
+                            }}
+                          >
+                            <div className="flex items-center justify-between pb-2 border-b" style={{ borderColor: 'var(--card-border)' }}>
+                              <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                <Calendar className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                                <span>时间轴范围与月份选择</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setIsTimelineDatePickerOpen(false)}
+                                className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* Mode Selector Tabs */}
+                            <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 text-xs">
+                              {[
+                                { mode: 'all', label: '全部' },
+                                { mode: 'month', label: '按月份' },
+                                { mode: 'year', label: '按年份' },
+                                { mode: 'range', label: '自定义' },
+                              ].map((item) => (
+                                <button
+                                  key={item.mode}
+                                  type="button"
+                                  onClick={() => setTimelineDateMode(item.mode as any)}
+                                  style={
+                                    timelineDateMode === item.mode
+                                      ? {
+                                          backgroundColor: 'var(--card-bg)',
+                                          color: 'var(--accent-gold)',
+                                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                                        }
+                                      : undefined
+                                  }
+                                  className={`py-1.5 px-1 text-center rounded-lg font-medium transition-all cursor-pointer ${
+                                    timelineDateMode === item.mode
+                                      ? 'font-bold'
+                                      : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                                  }`}
+                                >
+                                  {item.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Mode-specific Controls */}
+                            {timelineDateMode === 'month' && (
+                              <div className="space-y-2.5 pt-1">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                    选择年份与月份：
+                                  </label>
+                                  <span className="text-xs font-mono font-bold" style={{ color: 'var(--accent-gold)' }}>
+                                    {timelineFilterMonth}
+                                  </span>
+                                </div>
+
+                                {/* Year selector pills for month view */}
+                                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                                  {availableTimelineYears.map((yr) => (
+                                    <button
+                                      key={yr}
+                                      type="button"
+                                      onClick={() => {
+                                        setTimelineFilterYear(yr);
+                                        const m = timelineFilterMonth.slice(5, 7) || '01';
+                                        setTimelineFilterMonth(`${yr}-${m}`);
+                                      }}
+                                      style={{
+                                        borderColor: timelineFilterMonth.startsWith(yr) ? 'var(--accent-gold)' : undefined,
+                                        backgroundColor: timelineFilterMonth.startsWith(yr) ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : undefined,
+                                        color: timelineFilterMonth.startsWith(yr) ? 'var(--accent-gold)' : undefined,
+                                      }}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-mono border shrink-0 transition-all cursor-pointer ${
+                                        timelineFilterMonth.startsWith(yr)
+                                          ? 'font-bold shadow-2xs'
+                                          : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400'
+                                      }`}
+                                    >
+                                      {yr}年
+                                    </button>
+                                  ))}
+                                </div>
+
+                                {/* 12 Months Grid */}
+                                <div className="grid grid-cols-4 gap-1.5">
+                                  {Array.from({ length: 12 }, (_, i) => {
+                                    const mNum = i + 1;
+                                    const currentYr = timelineFilterMonth.slice(0, 4) || timelineFilterYear;
+                                    const monthStr = `${currentYr}-${String(mNum).padStart(2, '0')}`;
+                                    const isSelected = timelineFilterMonth === monthStr;
+                                    const count = artworks.filter((a) => (a.date || a.createdAt || '').startsWith(monthStr)).length;
+
+                                    return (
+                                      <button
+                                        key={mNum}
+                                        type="button"
+                                        onClick={() => setTimelineFilterMonth(monthStr)}
+                                        style={{
+                                          backgroundColor: isSelected 
+                                            ? 'var(--accent-gold)' 
+                                            : (count > 0 ? 'color-mix(in srgb, var(--accent-gold) 8%, transparent)' : undefined),
+                                          borderColor: isSelected 
+                                            ? 'var(--accent-gold)' 
+                                            : 'var(--card-border)',
+                                        }}
+                                        className={`py-1.5 px-1 rounded-xl text-xs border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+                                          isSelected ? 'font-bold shadow-xs' : 'hover:border-amber-400'
+                                        }`}
+                                      >
+                                        <span 
+                                          className="font-mono font-bold text-xs"
+                                          style={{
+                                            color: isSelected ? '#FFFFFF' : 'var(--accent-gold)',
+                                          }}
+                                        >
+                                          {mNum}月
+                                        </span>
+                                        <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-neutral-400'}`}>
+                                          {count > 0 ? `${count}件` : '-'}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Manual month input */}
+                                <div className="pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                                  <input
+                                    type="month"
+                                    value={timelineFilterMonth}
+                                    onChange={(e) => setTimelineFilterMonth(e.target.value)}
+                                    className="w-full px-3 py-1.5 rounded-xl text-xs font-mono border focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                    style={{
+                                      backgroundColor: 'var(--search-bg)',
+                                      borderColor: 'var(--card-border)',
+                                      color: 'var(--text-main)',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {timelineDateMode === 'year' && (
+                              <div className="space-y-3 pt-1">
+                                <div className="space-y-1.5">
+                                  <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                    选择要展示的年份：
+                                  </label>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {availableTimelineYears.map((yr) => {
+                                      const isSelected = timelineFilterYear === yr;
+                                      return (
+                                        <button
+                                          key={yr}
+                                          type="button"
+                                          onClick={() => setTimelineFilterYear(yr)}
+                                          style={{
+                                            borderColor: isSelected ? 'var(--accent-gold)' : undefined,
+                                            backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent-gold) 15%, transparent)' : undefined,
+                                            color: isSelected ? 'var(--accent-gold)' : undefined,
+                                          }}
+                                          className={`py-2 px-3 rounded-xl text-xs font-mono border transition-all cursor-pointer ${
+                                            isSelected
+                                              ? 'font-bold shadow-2xs'
+                                              : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300'
+                                          }`}
+                                        >
+                                          {yr} 年
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Display Months overview with theme-colored month numbers */}
+                                <div className="space-y-1.5 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                                  <div className="flex items-center justify-between">
+                                    <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                      {timelineFilterYear} 年各月份作品概览：
+                                    </label>
+                                    <span className="text-[10px]" style={{ color: 'var(--accent-gold)' }}>
+                                      点击可切换单月
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-1.5">
+                                    {Array.from({ length: 12 }, (_, i) => {
+                                      const monthNum = i + 1;
+                                      const monthStr = `${timelineFilterYear}-${String(monthNum).padStart(2, '0')}`;
+                                      const count = artworks.filter((a) => (a.date || a.createdAt || '').startsWith(monthStr)).length;
+                                      const isCurrentMonthFilter = timelineDateMode === 'month' && timelineFilterMonth === monthStr;
+
+                                      return (
+                                        <button
+                                          key={monthNum}
+                                          type="button"
+                                          onClick={() => {
+                                            setTimelineFilterMonth(monthStr);
+                                            setTimelineDateMode('month');
+                                          }}
+                                          style={{
+                                            backgroundColor: isCurrentMonthFilter 
+                                              ? 'color-mix(in srgb, var(--accent-gold) 20%, transparent)' 
+                                              : 'color-mix(in srgb, var(--accent-gold) 6%, transparent)',
+                                            borderColor: isCurrentMonthFilter 
+                                              ? 'var(--accent-gold)' 
+                                              : 'color-mix(in srgb, var(--accent-gold) 20%, transparent)',
+                                          }}
+                                          className="py-1.5 px-1 rounded-xl text-xs border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer hover:scale-102"
+                                          title={`${timelineFilterYear}年${monthNum}月 (${count}件作品)`}
+                                        >
+                                          <span 
+                                            className="font-mono font-bold text-xs" 
+                                            style={{ color: 'var(--accent-gold)' }}
+                                          >
+                                            {monthNum}月
+                                          </span>
+                                          <span className="text-[10px] font-mono text-neutral-400">
+                                            {count > 0 ? `${count}件` : '-'}
+                                          </span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {timelineDateMode === 'range' && (
+                              <div className="space-y-3 pt-1">
+                                <div className="space-y-1.5">
+                                  <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                    起始日期：
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={timelineRangeStart}
+                                    onChange={(e) => setTimelineRangeStart(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl text-xs font-mono border focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                    style={{
+                                      backgroundColor: 'var(--search-bg)',
+                                      borderColor: 'var(--card-border)',
+                                      color: 'var(--text-main)',
+                                    }}
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-xs text-neutral-500 dark:text-neutral-400 block font-medium">
+                                    截止日期：
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={timelineRangeEnd}
+                                    onChange={(e) => setTimelineRangeEnd(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl text-xs font-mono border focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                    style={{
+                                      backgroundColor: 'var(--search-bg)',
+                                      borderColor: 'var(--card-border)',
+                                      color: 'var(--text-main)',
+                                    }}
+                                  />
+                                </div>
+                                {/* Quick Presets */}
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                  {[
+                                    { label: '近3个月', months: 3 },
+                                    { label: '近半年', months: 6 },
+                                    { label: '近1年', months: 12 },
+                                  ].map((preset) => (
+                                    <button
+                                      key={preset.label}
+                                      type="button"
+                                      onClick={() => {
+                                        const end = new Date();
+                                        const start = new Date();
+                                        start.setMonth(start.getMonth() - preset.months);
+                                        setTimelineRangeEnd(end.toISOString().slice(0, 10));
+                                        setTimelineRangeStart(start.toISOString().slice(0, 10));
+                                      }}
+                                      className="px-2 py-1 rounded-lg text-[11px] border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                                    >
+                                      {preset.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Footer actions */}
+                            <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--card-border)' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTimelineDateMode('all');
+                                  setTimelineRangeStart('');
+                                  setTimelineRangeEnd('');
+                                  setIsTimelineDatePickerOpen(false);
+                                }}
+                                className="text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 cursor-pointer"
+                              >
+                                重置显示全部
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsTimelineDatePickerOpen(false)}
+                                className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs transition-transform active:scale-95 cursor-pointer"
+                                style={{ backgroundColor: 'var(--accent-gold)' }}
+                              >
+                                确认应用
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <div 
@@ -1639,10 +2109,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({
                           {/* Month Header Date Display (Clean, spacious, unblocked) */}
                           <div className="flex items-center gap-2 h-7 min-h-[28px]">
                             <h3 
-                              className="font-art-serif text-base sm:text-lg font-bold tracking-wide"
+                              className="font-art-serif text-base sm:text-lg font-bold tracking-wide flex items-center gap-1.5"
                               style={{ color: 'var(--text-main)' }}
                             >
-                              {group.title}
+                              {group.title.includes('年') ? (
+                                <>
+                                  <span>{group.title.split('年')[0]}年</span>
+                                  <span style={{ color: 'var(--accent-gold)' }}>{group.title.split('年')[1]}</span>
+                                </>
+                              ) : (
+                                <span>{group.title}</span>
+                              )}
                             </h3>
                             <span 
                               className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-medium border"

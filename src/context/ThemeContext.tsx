@@ -350,8 +350,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const navOp = currentColors.navbarOpacity !== undefined ? currentColors.navbarOpacity : 100;
     const dockOp = currentColors.dockOpacity !== undefined ? currentColors.dockOpacity : navOp;
     const contentOp = currentColors.contentOpacity !== undefined ? currentColors.contentOpacity : 100;
-    const modalOp = currentColors.modalOpacity !== undefined ? currentColors.modalOpacity : 98;
-    const searchOp = currentColors.searchOpacity !== undefined ? currentColors.searchOpacity : 90;
+    const modalOp = currentColors.modalOpacity !== undefined ? currentColors.modalOpacity : 100;
+    const searchOp = currentColors.searchOpacity !== undefined ? currentColors.searchOpacity : 100;
     const badgeOp = currentColors.badgeOpacity !== undefined ? currentColors.badgeOpacity : 100;
 
     // Apply styles to root classList

@@ -594,7 +594,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div>
             <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
               <SlidersHorizontal className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-              <span>全站自定义字号大小</span>
+              <span>自定义字号大小</span>
             </h2>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
               根据视觉习惯调整基准字号，实时提升全站标题、画廊作品与日志的阅读舒适度。
@@ -606,37 +606,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             style={{ color: 'var(--text-muted)' }}
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>重置为标准字号 (16px)</span>
+            <span>重置为默认字号</span>
           </button>
         </div>
 
         <div className="space-y-4">
-          {/* Preset Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { size: 13, label: '精细 (13px)' },
-              { size: 14, label: '紧凑 (14px)' },
-              { size: 16, label: '标准 (16px)' },
-              { size: 18, label: '大号 (18px)' },
-              { size: 20, label: '特大 (20px)' },
-            ].map((item) => (
-              <button
-                key={item.size}
-                onClick={() => setFontSize(item.size)}
-                style={{
-                  backgroundColor: fontSize === item.size
-                    ? 'var(--accent-gold)'
-                    : 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
-                  color: fontSize === item.size ? '#FFFFFF' : 'var(--text-main)',
-                  borderColor: fontSize === item.size ? 'var(--accent-gold)' : 'var(--card-border)',
-                }}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 shadow-2xs"
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
           {/* Slider Controls */}
           <ThemeSlider
             label="拖动滑块调整字号基准"
@@ -1380,7 +1354,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* 4. 搜索与输入框 */}
                 <ThemeSlider
                   label="搜索与输入框透明度"
-                  value={customColors.searchOpacity !== undefined ? customColors.searchOpacity : 90}
+                  value={customColors.searchOpacity !== undefined ? customColors.searchOpacity : 100}
                   onChange={(val) => setCustomColors({ searchOpacity: val })}
                   min={0}
                   max={100}
@@ -1392,7 +1366,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* 6. 弹窗与浮层 */}
                 <ThemeSlider
                   label="弹窗与浮层透明度"
-                  value={customColors.modalOpacity !== undefined ? customColors.modalOpacity : 98}
+                  value={customColors.modalOpacity !== undefined ? customColors.modalOpacity : 100}
                   onChange={(val) => setCustomColors({ modalOpacity: val })}
                   min={10}
                   max={100}
