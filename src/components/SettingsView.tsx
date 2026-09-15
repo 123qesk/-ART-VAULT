@@ -28,7 +28,13 @@ import {
   Film,
   Box,
   SunMedium,
-  Minimize2
+  Minimize2,
+  ShieldCheck,
+  FileJson,
+  FolderArchive,
+  AlertTriangle,
+  CheckCircle2,
+  HardDrive
 } from 'lucide-react';
 import { ThemeMode, CustomThemeColors, DisplayMode, WallpaperConfig } from '../types';
 import { useTheme, BUILTIN_THEMES_DEFAULT } from '../context/ThemeContext';
@@ -36,7 +42,7 @@ import { ThemeSlider } from './ThemeSlider';
 
 interface SettingsViewProps {
   onExportBackup: () => void;
-  onImportBackup: (jsonContent: string) => Promise<{ artworksCount: number; diariesCount: number }>;
+  onImportBackup: (jsonContent: string) => Promise<{ artworksCount: number; diariesCount: number; presetsCount?: number }>;
   onResetDefaults: () => Promise<void>;
   artworksCount: number;
   diariesCount: number;
@@ -217,10 +223,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processBackupFile = (file: File) => {
+    if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+      setImportStatus('请上传 .json 格式的画匣备份文件');
+      setTimeout(() => setImportStatus(''), 4000);
+      return;
+    }
     try {
       const reader = new FileReader();
       reader.onload = async (ev) => {
@@ -230,16 +238,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           const parts = [`${result.artworksCount} 件作品`];
           if (result.diariesCount) parts.push(`${result.diariesCount} 篇日记`);
           if (result.presetsCount) parts.push(`${result.presetsCount} 个美化预设`);
-          setImportStatus(`成功导入：${parts.join('、')}！`);
-          setTimeout(() => setImportStatus(''), 4000);
+          setImportStatus(`成功恢复备份：${parts.join('、')}！`);
+          setTimeout(() => setImportStatus(''), 5000);
         } catch (err: any) {
           setImportStatus(`导入失败: ${err.message || '文件格式不正确'}`);
+          setTimeout(() => setImportStatus(''), 6000);
         }
       };
       reader.readAsText(file);
     } catch (err: any) {
       setImportStatus(`读取文件失败: ${err.message}`);
+      setTimeout(() => setImportStatus(''), 4000);
     }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processBackupFile(file);
+    e.target.value = '';
   };
 
   return (
@@ -1790,70 +1807,252 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Database & Data Management */}
       <section 
-        className="p-6 rounded-3xl border shadow-xs space-y-5"
+        className="p-5 sm:p-7 rounded-3xl border shadow-xs space-y-6"
         style={{
           backgroundColor: 'var(--card-bg)',
           borderColor: 'var(--card-border)',
         }}
       >
-        <div className="flex items-start justify-between gap-4">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
           <div>
-            <h2 className="font-art-serif text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-              <Database className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
-              <span>数据存储与备份</span>
-            </h2>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              您的作品原图/动图/视频媒体、分类标签、创作日记及自定义美化预设均安全储存于本地数据库。
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-8 h-8 rounded-xl flex items-center justify-center border"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                  color: 'var(--accent-gold)',
+                }}
+              >
+                <Database className="w-4 h-4" />
+              </div>
+              <h2 className="font-art-serif text-base sm:text-lg font-bold" style={{ color: 'var(--text-main)' }}>
+                数据存储与备份
+              </h2>
+              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                <ShieldCheck className="w-3 h-3" /> 本地安全沙盒
+              </span>
+            </div>
+            <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              您的作品原图/动图/视频媒体、分类标签、创作日记及所有自定义美化预设均私密储存于本机的 IndexedDB 数据库中。
             </p>
           </div>
-          <div className="text-right shrink-0">
-            <span className="text-xs font-mono block" style={{ color: 'var(--text-muted)' }}>当前数据统计</span>
-            <span className="font-art-serif text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-              {artworksCount} 件作品 · {diariesCount} 篇日记 · {savedPresets.length} 个预设
-            </span>
+
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono shrink-0 self-start sm:self-auto"
+            style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
+          >
+            <HardDrive className="w-3.5 h-3.5" style={{ color: 'var(--accent-gold)' }} />
+            <span>存储引擎: IndexedDB</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-          {/* Export Backup */}
+        {/* Live Metrics Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
           <div 
-            className="p-4 rounded-2xl border flex flex-col justify-between space-y-3"
+            className="p-3 sm:p-3.5 rounded-2xl border space-y-1"
             style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
           >
-            <div>
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>
-                导出完整备份 (JSON)
-              </h3>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                将作品信息、原图/动图/视频媒体、所有创作日记、分类与全部自定义美化预设/主题外观打包导出为本地单文件，方便换设备或长期归档。
-              </p>
+            <span className="text-[11px] block" style={{ color: 'var(--text-muted)' }}>作品与素材</span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-art-serif text-lg sm:text-xl font-bold" style={{ color: 'var(--text-main)' }}>
+                {artworksCount}
+              </span>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>件</span>
             </div>
+          </div>
+
+          <div 
+            className="p-3 sm:p-3.5 rounded-2xl border space-y-1"
+            style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
+          >
+            <span className="text-[11px] block" style={{ color: 'var(--text-muted)' }}>创作日志</span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-art-serif text-lg sm:text-xl font-bold" style={{ color: 'var(--text-main)' }}>
+                {diariesCount}
+              </span>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>篇</span>
+            </div>
+          </div>
+
+          <div 
+            className="p-3 sm:p-3.5 rounded-2xl border space-y-1"
+            style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
+          >
+            <span className="text-[11px] block" style={{ color: 'var(--text-muted)' }}>自定义美化预设</span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-art-serif text-lg sm:text-xl font-bold" style={{ color: 'var(--text-main)' }}>
+                {savedPresets.length}
+              </span>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>个</span>
+            </div>
+          </div>
+
+          <div 
+            className="p-3 sm:p-3.5 rounded-2xl border space-y-1"
+            style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
+          >
+            <span className="text-[11px] block" style={{ color: 'var(--text-muted)' }}>隐私与数据安全</span>
+            <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs pt-1">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>100% 离线私密</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Backup & Restore Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* Export Card */}
+          <div 
+            className="p-5 rounded-2xl border flex flex-col justify-between space-y-4 relative overflow-hidden group hover:border-amber-500/40 transition-all shadow-2xs"
+            style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-8 h-8 rounded-xl flex items-center justify-center border"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                      borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, transparent)',
+                      color: 'var(--accent-gold)',
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                      导出完整画匣备份
+                    </h3>
+                    <span className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
+                      格式: JSON 独立归档包
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                将画匣中的全部数据打包生成单文件备份，方便在更换电脑、重装系统或长期离线归档时随时还原。
+              </p>
+
+              {/* What's included checklist */}
+              <div 
+                className="p-3 rounded-xl border text-[11px] space-y-1.5 font-mono"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--card-bg) 60%, transparent)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text-main)',
+                }}
+              >
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>高清原图、动图及短视频媒体原件</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>全部创作随笔心得及作品关联</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>自定义配色预设、各主题调色板与壁纸</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>分类标签、置顶收藏与作品尺寸参数</span>
+                </div>
+              </div>
+            </div>
+
             <button
               onClick={onExportBackup}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold hover:shadow transition-all"
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm hover:shadow active:scale-98 transition-all text-white"
               style={{
-                backgroundColor: 'var(--text-main)',
-                color: 'var(--bg-page)',
+                backgroundColor: 'var(--accent-gold)',
               }}
             >
               <Download className="w-3.5 h-3.5" />
-              <span>下载画匣备份包</span>
+              <span>立即下载完整备份包 (.json)</span>
             </button>
           </div>
 
-          {/* Import Backup */}
+          {/* Import / Restore Card */}
           <div 
-            className="p-4 rounded-2xl border flex flex-col justify-between space-y-3"
+            className="p-5 rounded-2xl border flex flex-col justify-between space-y-4 relative overflow-hidden group hover:border-amber-500/40 transition-all shadow-2xs"
             style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--card-border)' }}
           >
-            <div>
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>
-                恢复 / 导入画匣备份
-              </h3>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                从此前导出的画匣 JSON 备份文件中完整还原所有作品媒体、创作日记与自定义美化预设。
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-8 h-8 rounded-xl flex items-center justify-center border"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--text-main) 8%, transparent)',
+                      borderColor: 'var(--card-border)',
+                      color: 'var(--text-main)',
+                    }}
+                  >
+                    <FolderArchive className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                      恢复 / 导入画匣备份
+                    </h3>
+                    <span className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
+                      格式: JSON 独立归档包
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                从此前导出的画匣 JSON 备份文件中完整还原作品库、创作日志与所有自定义外观配置。
               </p>
+
+              {/* What's restored checklist */}
+              <div 
+                className="p-3 rounded-xl border text-[11px] space-y-1.5 font-mono"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--card-bg) 60%, transparent)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text-main)',
+                }}
+              >
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>兼容画匣各版本生成的标准 JSON 备份</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>自动还原作品媒体原件及画作元数据</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>恢复全部创作随笔心得及关联记录</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>实时重载自定义调色板、预设与壁纸</span>
+                </div>
+              </div>
+
+              {/* Import status notification */}
+              {importStatus && (
+                <div 
+                  className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 animate-in fade-in ${
+                    importStatus.includes('失败') ? 'text-rose-600 bg-rose-500/10 border-rose-500/30' : 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30'
+                  }`}
+                >
+                  {importStatus.includes('失败') ? (
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  )}
+                  <span className="truncate">{importStatus}</span>
+                </div>
+              )}
             </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -1861,9 +2060,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               className="hidden"
               onChange={handleFileChange}
             />
+
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border hover:border-amber-500 transition-all"
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border hover:border-amber-500 active:scale-98 transition-all"
               style={{
                 backgroundColor: 'var(--card-bg)',
                 borderColor: 'var(--card-border)',
@@ -1871,51 +2071,72 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               }}
             >
               <Upload className="w-3.5 h-3.5" />
-              <span>选择备份文件导入</span>
+              <span>选择本地备份文件导入</span>
             </button>
           </div>
         </div>
 
-        {/* Reset data */}
-        <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ borderColor: 'var(--card-border)' }}>
+        {/* Data Security Notice Tip */}
+        <div 
+          className="p-4 rounded-2xl border text-xs flex items-start gap-3"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--accent-gold) 6%, var(--bg-page))',
+            borderColor: 'color-mix(in srgb, var(--accent-gold) 25%, var(--card-border))',
+          }}
+        >
+          <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--accent-gold)' }} />
+          <div className="space-y-1">
+            <p className="font-semibold" style={{ color: 'var(--text-main)' }}>
+              画师数据安全小建议
+            </p>
+            <p className="leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              画匣坚持「纯本地隐私优先」，数据仅保存在您的浏览器沙盒中，不会上传到任何第三方云端。当您清理浏览器缓存、重装操作系统或更换设备时，本地存储可能被重置，建议在创作重要节点定期「下载画匣备份包」保存在本地电脑或网盘中。
+            </p>
+          </div>
+        </div>
+
+        {/* Danger Zone: Reset Data */}
+        <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-4" style={{ borderColor: 'var(--card-border)' }}>
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            <p className="font-semibold" style={{ color: 'var(--text-main)' }}>重置数据</p>
-            <p>清除画匣所有数据</p>
+            <p className="font-semibold" style={{ color: 'var(--text-main)' }}>重置画匣数据</p>
+            <p className="text-[11px] mt-0.5">清空本地存储的所有作品、日记与自定义美化预设，恢复至初始预设状态。</p>
           </div>
 
-          {isResetConfirming ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-rose-500 font-medium">确认重置？</span>
+          <div className="flex items-center justify-end sm:ml-auto shrink-0 self-end sm:self-auto">
+            {isResetConfirming ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-rose-500 font-medium">确认重置所有数据？</span>
+                <button
+                  onClick={async () => {
+                    await onResetDefaults();
+                    setIsResetConfirming(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs"
+                >
+                  确定重置
+                </button>
+                <button
+                  onClick={() => setIsResetConfirming(false)}
+                  className="px-3 py-1.5 rounded-xl border text-xs font-medium"
+                  style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
+                >
+                  取消
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={async () => {
-                  await onResetDefaults();
-                  setIsResetConfirming(false);
+                onClick={() => setIsResetConfirming(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border hover:border-rose-500 hover:text-rose-500 text-xs font-medium transition-colors"
+                style={{
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text-muted)',
                 }}
-                className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium"
               >
-                确定重置
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>重置数据</span>
               </button>
-              <button
-                onClick={() => setIsResetConfirming(false)}
-                className="px-3 py-1.5 rounded-lg border text-xs"
-                style={{ borderColor: 'var(--card-border)' }}
-              >
-                取消
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsResetConfirming(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border hover:border-rose-500 hover:text-rose-500 text-xs font-medium transition-colors"
-              style={{
-                borderColor: 'var(--card-border)',
-                color: 'var(--text-muted)',
-              }}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>重置</span>
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </section>
 

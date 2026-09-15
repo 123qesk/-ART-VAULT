@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, 
   Plus, 
@@ -11,9 +11,25 @@ import {
   Sparkles,
   Link,
   X,
-  Check
+  Check,
+  RotateCcw,
+  CloudUpload,
+  FileEdit,
+  CheckCircle2
 } from 'lucide-react';
 import { DiaryEntry, Artwork } from '../types';
+
+const DRAFT_STORAGE_KEY = 'art_vault_diary_draft_v2';
+
+interface DiaryDraft {
+  id: string | null; // null for new entry, string for existing diary
+  title: string;
+  date: string;
+  content: string;
+  selectedArtId: string;
+  tagsInput: string;
+  savedAt: number;
+}
 
 interface DiaryViewProps {
   diaries: DiaryEntry[];
@@ -45,24 +61,188 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
   const [tagsInput, setTagsInput] = useState('');
   const [filterArtworkId, setFilterArtworkId] = useState<string>('all');
 
+  // Auto-save draft states
+  const [storedDraft, setStoredDraft] = useState<DiaryDraft | null>(null);
+  const [draftStatus, setDraftStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const [isDraftRestoredNotice, setIsDraftRestoredNotice] = useState(false);
+  const isInitialMount = useRef(true);
+
+  // Helper to read draft from storage (sessionStorage first, fallback to localStorage)
+  const readDraftFromStorage = (): DiaryDraft | null => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY) || localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && (parsed.title?.trim() || parsed.content?.trim() || parsed.tagsInput?.trim())) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Error reading diary draft:', e);
+    }
+    return null;
+  };
+
+  // Helper to persist draft to both sessionStorage and localStorage
+  const persistDraft = (draft: DiaryDraft | null) => {
+    try {
+      if (!draft) {
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        setStoredDraft(null);
+      } else {
+        const serialized = JSON.stringify(draft);
+        sessionStorage.setItem(DRAFT_STORAGE_KEY, serialized);
+        localStorage.setItem(DRAFT_STORAGE_KEY, serialized);
+        setStoredDraft(draft);
+      }
+    } catch (e) {
+      console.error('Error persisting diary draft:', e);
+    }
+  };
+
+  // Initial load of draft on mount
+  useEffect(() => {
+    const draft = readDraftFromStorage();
+    if (draft) {
+      setStoredDraft(draft);
+      const d = new Date(draft.savedAt);
+      setLastSavedTime(
+        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
+      );
+    }
+  }, []);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (!isModalOpen) return;
+
+    // If all fields are empty, clear draft
+    if (!title.trim() && !content.trim() && !tagsInput.trim()) {
+      persistDraft(null);
+      setDraftStatus('idle');
+      return;
+    }
+
+    setDraftStatus('saving');
+
+    const debounceTimer = setTimeout(() => {
+      const now = Date.now();
+      const currentDraft: DiaryDraft = {
+        id: editingDiary?.id || null,
+        title,
+        date,
+        content,
+        selectedArtId,
+        tagsInput,
+        savedAt: now,
+      };
+
+      persistDraft(currentDraft);
+      setDraftStatus('saved');
+
+      const d = new Date(now);
+      setLastSavedTime(
+        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
+      );
+    }, 600); // 600ms debounce
+
+    return () => clearTimeout(debounceTimer);
+  }, [isModalOpen, title, date, content, selectedArtId, tagsInput, editingDiary]);
+
+  // Synchronous beforeunload protection to catch sudden tab/window closure
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isModalOpen && (title.trim() || content.trim())) {
+        const currentDraft: DiaryDraft = {
+          id: editingDiary?.id || null,
+          title,
+          date,
+          content,
+          selectedArtId,
+          tagsInput,
+          savedAt: Date.now(),
+        };
+        try {
+          const serialized = JSON.stringify(currentDraft);
+          sessionStorage.setItem(DRAFT_STORAGE_KEY, serialized);
+          localStorage.setItem(DRAFT_STORAGE_KEY, serialized);
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isModalOpen, title, date, content, selectedArtId, tagsInput, editingDiary]);
+
+  // Apply draft data to form
+  const applyDraftToForm = (draft: DiaryDraft) => {
+    setTitle(draft.title || '');
+    setDate(draft.date || new Date().toISOString().split('T')[0]);
+    setContent(draft.content || '');
+    setSelectedArtId(draft.selectedArtId || '');
+    setTagsInput(draft.tagsInput || '');
+    if (draft.id) {
+      const matched = diaries.find((d) => d.id === draft.id);
+      setEditingDiary(matched || null);
+    } else {
+      setEditingDiary(null);
+    }
+    setIsDraftRestoredNotice(true);
+    setTimeout(() => setIsDraftRestoredNotice(false), 4000);
+    setIsModalOpen(true);
+  };
+
+  // Clear draft
+  const handleClearDraft = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    persistDraft(null);
+    setDraftStatus('idle');
+    setLastSavedTime(null);
+    setIsDraftRestoredNotice(false);
+  };
+
   // Open modal for creation or edit
   const handleOpenAdd = (associatedArt?: Artwork | null) => {
+    const activeDraft = readDraftFromStorage();
+    // If there is an unsaved new-diary draft, auto-restore it
+    if (activeDraft && !activeDraft.id && (activeDraft.title.trim() || activeDraft.content.trim())) {
+      applyDraftToForm(activeDraft);
+      return;
+    }
+
     setEditingDiary(null);
     setTitle(associatedArt ? `${associatedArt.title} 创作随笔` : '');
     setDate(new Date().toISOString().split('T')[0]);
     setContent('');
     setSelectedArtId(associatedArt?.id || '');
     setTagsInput(associatedArt ? '#技法笔记 #创作心得' : '#日常灵感');
+    setIsDraftRestoredNotice(false);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (diary: DiaryEntry) => {
+    const activeDraft = readDraftFromStorage();
+    // If there's an unsaved draft specifically for this diary ID, offer/apply it
+    if (activeDraft && activeDraft.id === diary.id && (activeDraft.content !== diary.content || activeDraft.title !== diary.title)) {
+      applyDraftToForm(activeDraft);
+      return;
+    }
+
     setEditingDiary(diary);
     setTitle(diary.title);
     setDate(diary.date);
     setContent(diary.content);
     setSelectedArtId(diary.artworkId || '');
     setTagsInput((diary.tags || []).map((t) => (t.startsWith('#') ? t : `#${t}`)).join(' '));
+    setIsDraftRestoredNotice(false);
     setIsModalOpen(true);
   };
 
@@ -90,6 +270,10 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
       editingDiary?.id
     );
 
+    // Clear saved draft on successful submit
+    persistDraft(null);
+    setDraftStatus('idle');
+    setLastSavedTime(null);
     setIsModalOpen(false);
     onClearPreselectedArtwork?.();
   };
@@ -135,18 +319,80 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
           </p>
         </div>
 
-        <button
-          id="btn-new-diary"
-          onClick={() => handleOpenAdd(preselectedArtwork)}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:shadow active:scale-95 transition-all w-full sm:w-auto shrink-0 text-white"
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <button
+            id="btn-new-diary"
+            onClick={() => handleOpenAdd(preselectedArtwork)}
+            className="relative inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:shadow active:scale-95 transition-all w-full sm:w-auto text-white"
+            style={{
+              backgroundColor: 'var(--accent-gold)',
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            <span>写创作日记</span>
+            {storedDraft && (storedDraft.title.trim() || storedDraft.content.trim()) && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] bg-white/25 text-white font-mono ml-1">
+                有草稿
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Unsaved Draft Floating Reminder Banner */}
+      {storedDraft && !isModalOpen && (storedDraft.title.trim() || storedDraft.content.trim()) && (
+        <div 
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl border shadow-xs animate-in fade-in slide-in-from-top-2"
           style={{
-            backgroundColor: 'var(--accent-gold)',
+            backgroundColor: 'color-mix(in srgb, var(--accent-gold) 8%, var(--card-bg))',
+            borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, var(--card-border))',
           }}
         >
-          <Plus className="w-4 h-4" />
-          <span>写创作日记</span>
-        </button>
-      </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <div 
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--accent-gold) 15%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--accent-gold) 30%, transparent)',
+                color: 'var(--accent-gold)',
+              }}
+            >
+              <FileEdit className="w-4 h-4" />
+            </div>
+            <div className="text-xs min-w-0 space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                  检测到未提交的创作日记草稿：{storedDraft.title ? `《${storedDraft.title}》` : '未命名随笔'}
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                  <CheckCircle2 className="w-3 h-3" /> 已自动存至本地
+                </span>
+              </div>
+              <p className="text-[11px] truncate font-mono" style={{ color: 'var(--text-muted)' }}>
+                {new Date(storedDraft.savedAt).toLocaleTimeString()} 暂存 · 共 {storedDraft.content.length} 字 · 刷新或关闭浏览器不会丢失
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <button
+              onClick={() => applyDraftToForm(storedDraft)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white shadow-2xs hover:shadow active:scale-95 transition-all"
+              style={{ backgroundColor: 'var(--accent-gold)' }}
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>继续编辑草稿</span>
+            </button>
+            <button
+              onClick={handleClearDraft}
+              className="px-2.5 py-1.5 rounded-xl text-xs hover:opacity-80 transition-opacity border"
+              style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
+              title="清除已暂存的草稿"
+            >
+              放弃草稿
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filter by artwork bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
@@ -370,18 +616,89 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
             style={{ backgroundColor: "var(--modal-bg)", borderColor: "var(--card-border)" }} 
             className="relative w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl sm:rounded-3xl border shadow-2xl p-4 sm:p-6 animate-in fade-in zoom-in-95 overflow-hidden"
           >
-            <div className="flex items-center justify-between border-b pb-3 shrink-0" style={{ borderColor: 'var(--card-border)' }}>
-              <h2 className="font-art-serif text-base sm:text-lg font-bold" style={{ color: 'var(--text-main)' }}>
-                {editingDiary ? '编辑创作日记' : '新建创作日记'}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full hover:opacity-70 transition-opacity"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
+            <div className="flex items-center justify-between border-b pb-3 shrink-0 gap-3" style={{ borderColor: 'var(--card-border)' }}>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <h2 className="font-art-serif text-base sm:text-lg font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                  {editingDiary ? '编辑创作日记' : '新建创作日记'}
+                </h2>
+                {/* Auto-save draft status indicator */}
+                <div className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-mono border"
+                  style={{
+                    backgroundColor: draftStatus === 'saving' 
+                      ? 'color-mix(in srgb, var(--accent-gold) 12%, transparent)' 
+                      : draftStatus === 'saved' 
+                      ? 'color-mix(in srgb, #10b981 12%, transparent)' 
+                      : 'var(--bg-page)',
+                    borderColor: 'var(--card-border)',
+                    color: draftStatus === 'saving' 
+                      ? 'var(--accent-gold)' 
+                      : draftStatus === 'saved' 
+                      ? '#10b981' 
+                      : 'var(--text-muted)',
+                  }}
+                >
+                  {draftStatus === 'saving' ? (
+                    <>
+                      <CloudUpload className="w-3 h-3 animate-pulse" />
+                      <span>正在暂存草稿...</span>
+                    </>
+                  ) : draftStatus === 'saved' ? (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                      <span>已自动暂存 {lastSavedTime}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-3 h-3 opacity-60" />
+                      <span>实时防丢暂存</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-1.5 rounded-full hover:opacity-70 transition-opacity"
+                  style={{ color: 'var(--text-muted)' }}
+                  title="关闭窗口 (草稿已自动保存)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
+
+            {/* Restored notice banner inside modal */}
+            {isDraftRestoredNotice && (
+              <div 
+                className="mt-2.5 px-3 py-1.5 rounded-xl border text-xs flex items-center justify-between gap-2 animate-in fade-in"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--accent-gold) 10%, var(--card-bg))',
+                  borderColor: 'color-mix(in srgb, var(--accent-gold) 35%, var(--card-border))',
+                  color: 'var(--text-main)',
+                }}
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="truncate text-[11px]">已自动为您载入上次未保存的草稿内容</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClearDraft();
+                    setTitle('');
+                    setContent('');
+                    setTagsInput('');
+                    setSelectedArtId('');
+                  }}
+                  className="text-[11px] underline hover:opacity-80 shrink-0"
+                  style={{ color: 'var(--accent-gold)' }}
+                >
+                  清空重新开始
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pt-3 pr-1 flex-1">
               <div>
@@ -482,22 +799,46 @@ export const DiaryView: React.FC<DiaryViewProps> = ({
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t shrink-0" style={{ borderColor: 'var(--card-border)' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-medium hover:opacity-80 transition-opacity"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-medium text-white shadow-sm transition-all active:scale-95"
-                  style={{ backgroundColor: 'var(--accent-gold)' }}
-                >
-                  保存日志
-                </button>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t shrink-0" style={{ borderColor: 'var(--card-border)' }}>
+                <div className="flex items-center gap-3 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                  <span>{content.length} 字</span>
+                  {(title.trim() || content.trim()) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('确定要清空正在编写的内容吗？')) {
+                          handleClearDraft();
+                          setTitle('');
+                          setContent('');
+                          setTagsInput('');
+                          setSelectedArtId('');
+                        }
+                      }}
+                      className="text-[11px] hover:text-rose-500 transition-colors"
+                    >
+                      清空重写
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-medium hover:opacity-80 transition-opacity border"
+                    style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-medium text-white shadow-sm transition-all active:scale-95"
+                    style={{ backgroundColor: 'var(--accent-gold)' }}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>保存日志</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
